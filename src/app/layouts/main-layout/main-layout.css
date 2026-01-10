@@ -1,0 +1,47 @@
+:host {
+  display: block;
+  height: 100vh;
+}
+
+.sidebar {
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.nav-link {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  background-color: rgba(255,255,255,0.1);
+  transform: translateX(5px);
+}
+
+.nav-link.active {
+  background-color: rgba(255,255,255,0.2);
+  font-weight: 500;
+}
+
+.bg-primary-dark {
+  background-color: #0056b3;
+}
+
+main {
+  padding-top: 1rem;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    min-height: auto;
+  }
+  
+  main {
+    padding-top: 1rem;
+  }
+}

@@ -1,0 +1,380 @@
+<div class="container-fluid">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="#">
+        <i class="bi bi-clock-history me-2"></i>
+        Control NGR
+      </a>
+      
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link active" routerLink="/dashboard">
+              <i class="bi bi-house-door me-1"></i>Inicio
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-calendar-week me-1"></i>Horarios
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-send-check me-1"></i>Solicitudes
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-diagram-3 me-1"></i>Organigrama
+            </a>
+          </li>
+          <li class="nav-item" *ngIf="isAdmin() || isSupervisor()">
+            <a class="nav-link text-warning" href="#">
+              <i class="bi bi-shield-check me-1"></i>Administración
+            </a>
+          </li>
+        </ul>
+        
+        <div class="navbar-nav">
+          <div class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle me-1"></i>
+              {{ currentEmpleado?.nombre.split(' ')[0] }}
+              <span class="badge bg-light text-dark ms-1">
+                {{ currentEmpleado?.rol | uppercase }}
+              </span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item" href="#">
+                  <i class="bi bi-person me-2"></i>Mi Perfil
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="#">
+                  <i class="bi bi-clock-history me-2"></i>Mis Asistencias
+                </a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item text-danger" href="#" (click)="logout(); $event.preventDefault()">
+                  <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container mt-4">
+    <!-- Bienvenida -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h2 class="text-primary mb-1">Bienvenido, {{ currentEmpleado?.nombre }}</h2>
+            <p class="text-muted mb-0">
+              <i class="bi bi-calendar-date me-1"></i>
+              {{ fechaActual | date:'fullDate' }}
+            </p>
+          </div>
+          <div class="text-end">
+            <div class="badge bg-light text-dark fs-6 p-2">
+              <i class="bi bi-person-badge me-1"></i>
+              {{ currentEmpleado?.cargo }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards de Acción Rápida -->
+    <div class="row g-4 mb-5">
+      <!-- Marcar Asistencia -->
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+              <i class="bi bi-clock-fill me-2"></i>Marcar Asistencia
+            </h5>
+          </div>
+          <div class="card-body">
+            <div *ngIf="isLoading" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+            </div>
+
+            <div *ngIf="!isLoading">
+              <!-- Estado Actual -->
+              <div class="text-center mb-4">
+                <div class="mb-2">
+                  <span class="badge bg-{{getBadgeColor()}} fs-6 p-2">
+                    {{ getEstadoAsistencia() }}
+                  </span>
+                </div>
+                <div class="row">
+                  <div class="col-6">
+                    <small class="text-muted d-block">Entrada</small>
+                    <h5 class="fw-bold">{{ getHoraFormateada(asistenciaHoy?.horaEntrada) }}</h5>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted d-block">Salida</small>
+                    <h5 class="fw-bold">{{ getHoraFormateada(asistenciaHoy?.horaSalida) }}</h5>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botones de Marcaje -->
+              <div class="d-grid gap-2">
+                <button 
+                  class="btn btn-success btn-lg py-3" 
+                  (click)="tipoMarcaje = 'entrada'; marcarAsistencia()"
+                  [disabled]="!puedeMarcarEntrada()">
+                  <i class="bi bi-box-arrow-in-right me-2"></i>
+                  Marcar Entrada
+                </button>
+                
+                <button 
+                  class="btn btn-danger btn-lg py-3" 
+                  (click)="tipoMarcaje = 'salida'; marcarAsistencia()"
+                  [disabled]="!puedeMarcarSalida()">
+                  <i class="bi bi-box-arrow-right me-2"></i>
+                  Marcar Salida
+                </button>
+              </div>
+
+              <!-- Observaciones -->
+              <div class="mt-3">
+                <label class="form-label small">Observaciones (opcional)</label>
+                <textarea 
+                  class="form-control" 
+                  rows="2" 
+                  [(ngModel)]="observaciones"
+                  placeholder="Ej: Reunión, visita externa, etc."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mi Información -->
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+              <i class="bi bi-person-badge me-2"></i>Mi Información
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="d-flex align-items-start">
+              <img [src]="currentEmpleado?.foto || 'assets/perfil-default.png'" 
+                   class="rounded-circle me-3 border" 
+                   width="100" 
+                   height="100" 
+                   alt="Foto">
+              <div class="flex-grow-1">
+                <h5 class="mb-2">{{ currentEmpleado?.nombre }}</h5>
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <td width="120"><strong>DNI:</strong></td>
+                    <td>{{ currentEmpleado?.dni }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Cargo:</strong></td>
+                    <td>{{ currentEmpleado?.cargo }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Nivel:</strong></td>
+                    <td>{{ currentEmpleado?.nivel }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Usuario:</strong></td>
+                    <td>{{ currentEmpleado?.username }}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+            <div class="mt-3">
+              <button class="btn btn-outline-info w-100">
+                <i class="bi bi-pencil me-1"></i>Editar Perfil
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones Rápidas -->
+      <div class="col-md-12 col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+          <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+              <i class="bi bi-lightning-charge me-2"></i>Acciones Rápidas
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <a href="#" class="list-group-item list-group-item-action border-0 py-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-primary bg-opacity-10 rounded p-2 me-3">
+                    <i class="bi bi-calendar-week text-primary"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-1">Ver Mi Horario</h6>
+                    <small class="text-muted">Consulta tu horario semanal</small>
+                  </div>
+                </div>
+              </a>
+              
+              <a href="#" class="list-group-item list-group-item-action border-0 py-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-warning bg-opacity-10 rounded p-2 me-3">
+                    <i class="bi bi-send-check text-warning"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-1">Nueva Solicitud</h6>
+                    <small class="text-muted">Vacaciones o compensación</small>
+                  </div>
+                </div>
+              </a>
+              
+              <a href="#" class="list-group-item list-group-item-action border-0 py-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-info bg-opacity-10 rounded p-2 me-3">
+                    <i class="bi bi-graph-up text-info"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-1">Reportes</h6>
+                    <small class="text-muted">Mis asistencias mensuales</small>
+                  </div>
+                </div>
+              </a>
+              
+              <a *ngIf="isAdmin() || isSupervisor()" 
+                 href="#" class="list-group-item list-group-item-action border-0 py-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-danger bg-opacity-10 rounded p-2 me-3">
+                    <i class="bi bi-people text-danger"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-1">Gestionar Empleados</h6>
+                    <small class="text-muted">Panel de administración</small>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estadísticas y Estado -->
+    <div class="row">
+      <!-- Estado del Día -->
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h6 class="mb-0">
+              <i class="bi bi-calendar-day me-2"></i>Estado del Día
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="border-end">
+                  <h3 class="text-primary mb-1">{{ fechaActual | date:'dd' }}</h3>
+                  <small class="text-muted">Día</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="border-end">
+                  <h3 class="text-info mb-1">{{ fechaActual | date:'MM' }}</h3>
+                  <small class="text-muted">Mes</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <div>
+                  <h3 class="text-success mb-1">{{ fechaActual | date:'yyyy' }}</h3>
+                  <small class="text-muted">Año</small>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="text-center">
+              <h5 class="mb-2">Resumen de Hoy</h5>
+              <p class="mb-0" *ngIf="asistenciaHoy?.observaciones">
+                <strong>Observaciones:</strong> {{ asistenciaHoy?.observaciones }}
+              </p>
+              <p class="text-muted small mt-2" *ngIf="!asistenciaHoy?.observaciones">
+                No hay observaciones para hoy
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Próximos Eventos -->
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h6 class="mb-0">
+              <i class="bi bi-bell me-2"></i>Próximos Eventos
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1">Reunión de Equipo</h6>
+                  <small class="text-muted">Hoy, 10:00 AM</small>
+                </div>
+                <p class="mb-1 small text-muted">Sala de Conferencias Principal</p>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1">Entrega de Reportes</h6>
+                  <small class="text-muted">Viernes</small>
+                </div>
+                <p class="mb-1 small text-muted">Reporte mensual de actividades</p>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1">Capacitación</h6>
+                  <small class="text-muted">Próxima semana</small>
+                </div>
+                <p class="mb-1 small text-muted">Nuevas políticas de la empresa</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-5 py-3 bg-light border-top">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6">
+          <small class="text-muted">
+            <i class="bi bi-shield-check me-1"></i>
+            Sistema Control NGR v1.0 - Gestión de Asistencia
+          </small>
+        </div>
+        <div class="col-md-6 text-end">
+          <small class="text-muted">
+            {{ currentEmpleado?.username }} | {{ fechaActual | date:'shortTime' }}
+          </small>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
