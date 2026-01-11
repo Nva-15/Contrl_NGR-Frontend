@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login';
 import { DashboardComponent } from './components/dashboard/dashboard';
+import { SolicitudesComponent } from './components/solicitudes/solicitudes';
 import { authGuard } from './guards/auth-guard';
 import { MainLayoutComponent } from './layouts/main-layout/main-layout';
 
@@ -24,6 +25,11 @@ export const routes: Routes = [
         path: 'dashboard', 
         component: DashboardComponent, 
         title: 'Dashboard - Control NGR'
+      },
+      { 
+        path: 'solicitudes', 
+        component: SolicitudesComponent, 
+        title: 'Solicitudes - Control NGR'
       }
     ]
   },

@@ -134,9 +134,17 @@ export class DashboardComponent implements OnInit {
   isSupervisor(): boolean {
     return this.authService.isSupervisor();
   }
-
+  
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+    
+  }
+  irASolicitudes() {
+    if (this.authService.isAdmin() || this.authService.isSupervisor()) {
+      this.router.navigate(['/solicitudes'], { queryParams: { tab: 'aprobar' } });
+    } else {
+      this.router.navigate(['/solicitudes'], { queryParams: { tab: 'mis-solicitudes' } });
+    }
   }
 }

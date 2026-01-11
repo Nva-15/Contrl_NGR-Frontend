@@ -1,1 +1,270 @@
-<p>solicitudes works!</p>
+<div class="container mt-4">
+  
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="text-primary fw-bold">
+        <i class="bi bi-folder2-open me-2"></i>Gestión de Solicitudes
+      </h3>
+      <button class="btn btn-primary" 
+              *ngIf="activeTab !== 'crear'" 
+              (click)="activeTab = 'crear'">
+        <i class="bi bi-plus-lg me-2"></i>Nueva Solicitud
+      </button>
+    </div>
+  
+    <div class="card shadow-sm border-0 mb-4 bg-light" *ngIf="activeTab === 'mis-solicitudes' || activeTab === 'historial'">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-center">
+          <div class="col-auto">
+            <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-funnel me-1"></i>Filtros:</span>
+          </div>
+          
+          <div class="col-md-3" *ngIf="esJefe() && activeTab === 'historial'">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" class="form-control border-start-0" placeholder="Buscar empleado..." [(ngModel)]="filtroNombre">
+            </div>
+          </div>
+  
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroEstado">
+              <option value="">Todos los Estados</option>
+              <option value="aprobado">✅ Aprobados</option>
+              <option value="rechazado">❌ Rechazados</option>
+              <option value="pendiente" *ngIf="activeTab === 'mis-solicitudes'">⏳ Pendientes</option>
+            </select>
+          </div>
+  
+          <div class="col-md-auto d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">Desde</span>
+              <input type="date" class="form-control" [(ngModel)]="filtroFechaInicio" (change)="validarFechasFiltro()">
+            </div>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">Hasta</span>
+              <input type="date" class="form-control" [(ngModel)]="filtroFechaFin" [min]="filtroFechaInicio">
+            </div>
+          </div>
+  
+          <div class="col-auto ms-auto">
+            <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()" title="Limpiar filtros">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <ul class="nav nav-tabs mb-0 border-bottom-0">
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'mis-solicitudes'" 
+           (click)="activeTab = 'mis-solicitudes'" href="javascript:void(0)">
+           <i class="bi bi-person me-1"></i>Mis Solicitudes
+        </a>
+      </li>
+      
+      <li class="nav-item" *ngIf="activeTab === 'crear'">
+        <a class="nav-link active" href="javascript:void(0)">
+           <i class="bi bi-pencil-square me-1"></i>Registrando...
+        </a>
+      </li>
+  
+      <ng-container *ngIf="esJefe()">
+        <li class="nav-item ms-auto"></li>
+        <li class="nav-item">
+          <a class="nav-link text-danger fw-bold" [class.active]="activeTab === 'aprobar'" 
+             (click)="activeTab = 'aprobar'" href="javascript:void(0)">
+             <i class="bi bi-exclamation-circle me-1"></i>Pendientes
+             <span class="badge bg-danger rounded-pill ms-1" *ngIf="solicitudesPendientes.length > 0">
+               {{ solicitudesPendientes.length }}
+             </span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [class.active]="activeTab === 'historial'" 
+             (click)="activeTab = 'historial'" href="javascript:void(0)">
+             <i class="bi bi-clock-history me-1"></i>Historial Global
+          </a>
+        </li>
+      </ng-container>
+    </ul>
+  
+    <div *ngIf="activeTab === 'mis-solicitudes'" class="card shadow-sm border-top-0 rounded-bottom">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-secondary">
+              <tr>
+                <th class="ps-4">Tipo</th>
+                <th>Fecha Solicitud</th>
+                <th>Rango Fechas</th>
+                <th>Motivo</th>
+                <th>Estado</th>
+                <th>Autorizado Por</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let sol of misSolicitudesFiltradas">
+                <td class="ps-4 fw-bold text-primary">{{ sol.tipo | titlecase }}</td>
+                <td class="text-muted small">{{ sol.fechaSolicitud | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td>
+                  <span class="badge bg-light text-dark border">
+                    {{ sol.fechaInicio | date:'dd/MM' }} ➔ {{ sol.fechaFin | date:'dd/MM/yyyy' }}
+                  </span>
+                </td>
+                <td class="text-truncate" style="max-width: 200px;" title="{{sol.motivo}}">{{ sol.motivo }}</td>
+                <td>
+                  <span class="badge rounded-pill" [ngClass]="getEstadoClass(sol.estado || '')">
+                    {{ sol.estado | uppercase }}
+                  </span>
+                </td>
+                <td>
+                  <div *ngIf="sol.aprobadoPor" class="d-flex align-items-center text-success">
+                    <i class="bi bi-person-check-fill me-2"></i>
+                    <span class="fw-bold">{{ sol.aprobadoPor }}</span> </div>
+                  <span *ngIf="!sol.aprobadoPor" class="text-muted small fst-italic">-- Pendiente --</span>
+                </td>
+              </tr>
+              <tr *ngIf="misSolicitudesFiltradas.length === 0">
+                <td colspan="6" class="text-center py-5 text-muted">No se encontraron registros.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  
+    <div *ngIf="activeTab === 'crear'" class="card shadow-sm border-top-0 rounded-bottom">
+      <div class="card-body p-4">
+        <div class="row justify-content-center">
+          <div class="col-md-8 col-lg-6">
+            <h4 class="mb-4 text-center">Registrar Nueva Solicitud</h4>
+            
+            <div *ngIf="mensaje" class="alert alert-success d-flex align-items-center mb-3">
+              <i class="bi bi-check-circle-fill me-2"></i> {{ mensaje }}
+            </div>
+            
+            <form (ngSubmit)="crearSolicitud()">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Tipo de Solicitud</label>
+                <select class="form-select" [(ngModel)]="nuevaSolicitud.tipo" name="tipo">
+                  <option value="vacaciones">Vacaciones</option>
+                  <option value="permiso">Permiso Personal</option>
+                  <option value="descanso">Descanso Médico</option>
+                  <option value="compensacion">Compensación de Horas</option>
+                </select>
+              </div>
+  
+              <div class="row mb-3">
+                <div class="col-6">
+                  <label class="form-label">Fecha Inicio</label>
+                  <input type="date" class="form-control" [(ngModel)]="nuevaSolicitud.fechaInicio" name="fi">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Fecha Fin</label>
+                  <input type="date" class="form-control" [(ngModel)]="nuevaSolicitud.fechaFin" name="ff" [min]="nuevaSolicitud.fechaInicio">
+                </div>
+              </div>
+  
+              <div class="mb-4">
+                <label class="form-label">Motivo</label>
+                <textarea class="form-control" rows="3" [(ngModel)]="nuevaSolicitud.motivo" name="motivo" placeholder="Explique el motivo..."></textarea>
+              </div>
+  
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="button" class="btn btn-outline-secondary me-md-2" (click)="activeTab = 'mis-solicitudes'">Cancelar</button>
+                <button type="submit" class="btn btn-primary px-4" [disabled]="isLoading">
+                  <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                  Enviar Solicitud
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <div *ngIf="activeTab === 'aprobar' && esJefe()" class="card shadow-sm border-top-0 rounded-bottom">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="bg-danger text-white">
+              <tr>
+                <th class="ps-4">Empleado</th>
+                <th>Solicitud</th>
+                <th>Fechas</th>
+                <th>Motivo</th>
+                <th class="text-end pe-4">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let sol of solicitudesPendientes">
+                <td class="ps-4">
+                  <div class="fw-bold">{{ sol.empleadoNombre }}</div>
+                  <small class="text-muted badge bg-white text-dark border">{{ sol.fechaSolicitud | date:'shortDate' }}</small>
+                </td>
+                <td><span class="badge bg-secondary">{{ sol.tipo | uppercase }}</span></td>
+                <td>{{ sol.fechaInicio | date:'dd/MM' }} al {{ sol.fechaFin | date:'dd/MM' }}</td>
+                <td class="text-truncate" style="max-width: 250px;" title="{{sol.motivo}}">{{ sol.motivo }}</td>
+                <td class="text-end pe-4">
+                  <button class="btn btn-success btn-sm me-2" (click)="procesar(sol.id!, 'aprobado')" title="Aprobar">
+                    <i class="bi bi-check-lg"></i> Aprobar
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" (click)="procesar(sol.id!, 'rechazado')" title="Rechazar">
+                    <i class="bi bi-x-lg"></i> Rechazar
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="solicitudesPendientes.length === 0">
+                <td colspan="5" class="text-center py-5">
+                  <div class="text-muted">
+                    <i class="bi bi-check2-circle fs-1 d-block mb-2 text-success"></i>
+                    ¡Todo al día! No hay solicitudes pendientes.
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  
+    <div *ngIf="activeTab === 'historial' && esJefe()" class="card shadow-sm border-top-0 rounded-bottom">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped align-middle mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th class="ps-4">Empleado</th>
+                <th>Tipo</th>
+                <th>Rango</th>
+                <th>Estado</th>
+                <th>Autorizado Por</th>
+                <th>Fecha Proceso</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let sol of historialGlobalFiltrado">
+                <td class="ps-4 fw-bold">{{ sol.empleadoNombre }}</td>
+                <td>{{ sol.tipo | titlecase }}</td>
+                <td>{{ sol.fechaInicio | date:'dd/MM/yyyy' }}</td>
+                <td><span class="badge" [ngClass]="getEstadoClass(sol.estado || '')">{{ sol.estado | uppercase }}</span></td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <i class="bi bi-person-circle me-2 text-muted"></i>
+                    <span>{{ sol.aprobadoPor || 'Sistema' }}</span>
+                  </div>
+                </td>
+                <td class="text-muted small">{{ sol.fechaAprobacion | date:'short' }}</td>
+              </tr>
+              <tr *ngIf="historialGlobalFiltrado.length === 0">
+                <td colspan="6" class="text-center py-5 text-muted">
+                  No se encontraron registros con los filtros actuales.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  
+  </div>
