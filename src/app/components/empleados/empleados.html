@@ -1,1 +1,224 @@
-<p>empleados works!</p>
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex align-items-center">
+        <button class="btn btn-outline-secondary me-3 d-md-none rounded-circle" (click)="volverAlDashboard()">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <h3 class="text-primary fw-bold mb-0">
+          <i class="bi bi-people-fill me-2 d-none d-md-inline"></i>Gestión de Personal
+        </h3>
+      </div>
+      
+      <button class="btn btn-primary" *ngIf="vista === 'lista'" (click)="cambiarVista('formulario')">
+        <i class="bi bi-person-plus-fill me-2"></i>Nuevo
+      </button>
+      <button class="btn btn-outline-secondary" *ngIf="vista === 'formulario'" (click)="cambiarVista('lista')">
+        <i class="bi bi-arrow-left me-2"></i>Volver
+      </button>
+    </div>
+  
+    <div *ngIf="vista === 'lista'" class="fade-in">
+      <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body py-3">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" class="form-control border-start-0" 
+                   placeholder="Buscar por Nombre, DNI o Cargo..." 
+                   [(ngModel)]="filtroBusqueda" (keyup)="filtrar()">
+          </div>
+        </div>
+      </div>
+  
+      <div *ngIf="mensaje" class="alert alert-success d-flex align-items-center">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ mensaje }}
+      </div>
+  
+      <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="bg-primary text-white">
+              <tr>
+                <th class="ps-3">Empleado</th>
+                <th>Info Laboral</th>
+                <th>Credenciales</th>
+                <th>Estado</th>
+                <th class="text-end pe-3">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let emp of empleadosFiltrados">
+                <td class="ps-3">
+                  <div class="fw-bold text-primary">{{ emp.nombre }}</div>
+                  <small class="text-muted"><i class="bi bi-card-heading me-1"></i>{{ emp.dni }}</small>
+                </td>
+                <td>
+                  <div class="fw-bold text-dark">{{ emp.cargo || 'Sin Cargo' }}</div>
+                  <small class="text-muted d-block" *ngIf="emp.ingreso">Ingreso: {{ emp.ingreso | date:'dd/MM/yy' }}</small>
+                </td>
+                <td>
+                  <div class="small"><i class="bi bi-person me-1"></i>{{ emp.username }}</div>
+                  <span class="badge bg-secondary rounded-pill" style="font-size: 0.7rem;">{{ emp.rol | uppercase }}</span>
+                </td>
+                <td>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" [checked]="emp.usuarioActivo" disabled>
+                  </div>
+                </td>
+                <td class="text-end pe-3">
+                  <button class="btn btn-sm btn-outline-primary me-2" (click)="editar(emp)" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" (click)="eliminar(emp.id!)" title="Desactivar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="empleadosFiltrados.length === 0">
+                <td colspan="5" class="text-center py-5 text-muted">No se encontraron registros.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  
+    <div *ngIf="vista === 'formulario'" class="row justify-content-center fade-in">
+      <div class="col-lg-8">
+        <div class="card shadow border-0">
+          <div class="card-header bg-primary text-white py-3">
+            <h5 class="mb-0">
+              <i class="bi" [class.bi-person-plus]="!isEditing" [class.bi-pencil-square]="isEditing"></i>
+              {{ isEditing ? 'Editar Empleado' : 'Registrar Nuevo Empleado' }}
+            </h5>
+          </div>
+          <div class="card-body p-4">
+            
+            <form [formGroup]="empForm" (ngSubmit)="guardar()">
+              
+              <h6 class="text-muted text-uppercase small fw-bold mb-3">Datos Personales</h6>
+              
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Tipo Documento</label>
+                  <select class="form-select" formControlName="tipoDoc">
+                    <option value="DNI">DNI (8)</option>
+                    <option value="CE">C. Extranjería (11)</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-8">
+                  <label class="form-label fw-bold">
+                      {{ tipoDocumento === 'DNI' ? 'Número DNI (8)' : 'Carné Extranjería (11)' }} *
+                  </label>
+                  <input type="text" class="form-control" formControlName="dni" 
+                         [class.is-invalid]="esInvalido('dni')"
+                         [maxlength]="tipoDocumento === 'DNI' ? 8 : 11" 
+                         oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                  
+                  <div class="invalid-feedback">
+                    Debe tener {{ tipoDocumento === 'DNI' ? '8' : '11' }} dígitos exactos.
+                  </div>
+                </div>
+              </div>
+  
+              <div class="mb-3">
+                 <label class="form-label fw-bold">Nombre Completo *</label>
+                 <input type="text" class="form-control" formControlName="nombre" 
+                        [class.is-invalid]="esInvalido('nombre')">
+                 <div class="invalid-feedback">El nombre es requerido (mínimo 3 letras).</div>
+              </div>
+  
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Fecha Nacimiento *</label>
+                  <input type="date" class="form-control" formControlName="cumpleanos" 
+                         [class.is-invalid]="esInvalido('cumpleanos')">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Fecha Ingreso *</label>
+                  <input type="date" class="form-control" formControlName="ingreso" 
+                         [class.is-invalid]="esInvalido('ingreso')">
+                </div>
+              </div>
+  
+              <div class="row mb-3">
+                  <div class="col-md-6">
+                      <label class="form-label">Hobby / Pasatiempo</label>
+                      <input type="text" class="form-control" formControlName="hobby" placeholder="Ej: Fútbol, Leer...">
+                  </div>
+                  <div class="col-md-6">
+                      <label class="form-label">Descripción Breve</label>
+                      <textarea class="form-control" rows="1" formControlName="descripcion" placeholder="Sobre el empleado..."></textarea>
+                  </div>
+              </div>
+  
+              <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-4">Información Laboral</h6>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Cargo</label>
+                  <input type="text" class="form-control" formControlName="cargo" placeholder="Ej: Supervisor">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Nivel</label>
+                  <select class="form-select" formControlName="nivel">
+                    <option value="tecnico">Técnico</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="jefe">Jefe / Gerente</option>
+                  </select>
+                </div>
+              </div>
+  
+              <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-4">Credenciales de Acceso</h6>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Usuario (Automático)</label>
+                  <input type="text" class="form-control bg-light" formControlName="username" readonly>
+                  <div class="form-text small">Se usa el número de documento como usuario.</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Rol de Permisos</label>
+                  <select class="form-select" formControlName="rol">
+                    <option value="tecnico">Técnico (Básico)</option>
+                    <option value="supervisor">Supervisor (Gestión)</option>
+                    <option value="admin">Administrador (Total)</option>
+                  </select>
+                </div>
+              </div>
+  
+              <div class="row mb-3">
+                <div class="col-md-6">
+                   <label class="form-label">Foto (Ruta)</label>
+                   <input type="text" class="form-control" formControlName="foto" placeholder="img/perfil.png">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" [class.text-primary]="isEditing">
+                      {{ isEditing ? 'Nueva Contraseña' : 'Contraseña' }}
+                  </label>
+                  <input type="password" class="form-control" formControlName="password" 
+                         [placeholder]="isEditing ? 'Dejar vacío para no cambiar' : 'Por defecto: password'">
+                </div>
+              </div>
+  
+              <div class="mb-4 bg-light p-3 rounded">
+                  <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" formControlName="usuarioActivo" id="uActivo">
+                      <label class="form-check-label fw-bold" for="uActivo">Usuario Activo (Puede hacer Login)</label>
+                  </div>
+              </div>
+  
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="button" class="btn btn-outline-secondary me-2" (click)="cambiarVista('lista')">Cancelar</button>
+                <button type="submit" class="btn btn-success px-5" [disabled]="isLoading || empForm.invalid">
+                  <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                  Guardar
+                </button>
+              </div>
+  
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+  </div>

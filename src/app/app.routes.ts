@@ -4,6 +4,7 @@ import { DashboardComponent } from './components/dashboard/dashboard';
 import { SolicitudesComponent } from './components/solicitudes/solicitudes';
 import { authGuard } from './guards/auth-guard';
 import { MainLayoutComponent } from './layouts/main-layout/main-layout';
+import { EmpleadosComponent } from './components/empleados/empleados';
 
 export const routes: Routes = [
   { 
@@ -30,6 +31,11 @@ export const routes: Routes = [
         path: 'solicitudes', 
         component: SolicitudesComponent, 
         title: 'Solicitudes - Control NGR'
+      },
+      { 
+        path: 'empleados', 
+        component: EmpleadosComponent, 
+        title: 'Gestión de Empleados'
       }
     ]
   },

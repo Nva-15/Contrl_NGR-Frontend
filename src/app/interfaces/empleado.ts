@@ -18,14 +18,20 @@ export interface Empleado {
   }
   
   export interface EmpleadoResponse {
-    id: number;
+    id?: number;
     dni: string;
     nombre: string;
     cargo: string;
     nivel: string;
-    username: string;
+    username?: string;
+    password?: string;
     rol: string;
-    foto: string;
-    activo: boolean;
-    usuarioActivo: boolean;
+    descripcion?: string;
+    hobby?: string;
+    cumpleanos?: string;
+    ingreso?: string;
+    foto?: string;
+    activo?: boolean;
+    identificador?: string;
+    usuarioActivo?: boolean;
   }
