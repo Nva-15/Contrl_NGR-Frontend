@@ -1,53 +1,53 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth';
-import { ImagenService } from '../../services/imagen'; // <-- NUEVO IMPORT
+import { ImagenService } from '../../services/imagen';
 
 @Component({
   selector: 'app-main-layout',
-  imports: [CommonModule, RouterLink, RouterOutlet],
+  standalone: true,
+  imports: [CommonModule, RouterLink, RouterOutlet, RouterLinkActive],
   templateUrl: './main-layout.html',
   styleUrls: ['./main-layout.css']
 })
 export class MainLayoutComponent implements OnInit {
-  private authService = inject(AuthService);
-  private imagenService = inject(ImagenService); // <-- NUEVA INYECCIÓN
+  private auth = inject(AuthService);
+  private imagenService = inject(ImagenService);
   private router = inject(Router);
 
   currentEmpleado: any;
+  fotoUrl: string = ''; // Variable para URL fija
 
   ngOnInit() {
-    this.currentEmpleado = this.authService.getCurrentEmpleado();
+    this.currentEmpleado = this.auth.getCurrentEmpleado();
     
     if (!this.currentEmpleado) {
       this.router.navigate(['/login']);
+      return;
     }
-  }
 
-  // NUEVO MÉTODO PARA FOTO
-  getFotoUrl(): string {
-    return this.imagenService.getEmpleadoFotoUrl(
+    // Generar URL una sola vez al inicio
+    this.fotoUrl = this.imagenService.getEmpleadoFotoUrl(
       this.currentEmpleado?.foto,
       this.currentEmpleado?.nombre
     );
   }
 
-  // NUEVO MÉTODO PARA ERRORES
   onImageError(event: Event): void {
     this.imagenService.handleImageError(event);
   }
 
   logout() {
-    this.authService.logout();
+    this.auth.logout();
     this.router.navigate(['/login']);
   }
 
   isAdmin(): boolean {
-    return this.authService.isAdmin();
+    return this.auth.isAdmin();
   }
 
   isSupervisor(): boolean {
-    return this.authService.isSupervisor();
+    return this.auth.isSupervisor();
   }
 }

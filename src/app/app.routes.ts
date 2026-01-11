@@ -11,21 +11,21 @@ export const routes: Routes = [
     component: LoginComponent, 
     title: 'Login - Control NGR' 
   },
+  { 
+    path: '', 
+    redirectTo: 'dashboard', 
+    pathMatch: 'full' 
+  },
+  { 
+    path: 'dashboard', 
+    component: DashboardComponent, 
+    title: 'Dashboard - Control NGR'
+  },
   {
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
-    children: [
-      { 
-        path: '', 
-        redirectTo: 'dashboard', 
-        pathMatch: 'full' 
-      },
-      { 
-        path: 'dashboard', 
-        component: DashboardComponent, 
-        title: 'Dashboard - Control NGR'
-      },
+    children: [      
       { 
         path: 'solicitudes', 
         component: SolicitudesComponent, 

@@ -1,84 +1,105 @@
 <div class="container-fluid vh-100">
   <div class="row h-100">
-    <!-- Sidebar -->
-    <nav class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse">
-      <div class="position-sticky pt-3">
-        <div class="text-center mb-4">
-          <i class="bi bi-clock-history text-white display-4"></i>
-          <h5 class="text-white mt-2 mb-0">Control NGR</h5>
-          <small class="text-white-50">Sistema de Asistencia</small>
-        </div>
+    
+    <nav class="col-md-3 col-lg-2 d-none d-md-flex flex-column bg-primary sidebar p-0">
+      
+      <div class="text-center pt-4 pb-3">
+        <i class="bi bi-clock-history text-white display-4"></i>
+        <h5 class="text-white mt-2 mb-0 fw-bold">Control NGR</h5>
+        <small class="text-white-50">Sistema de Asistencia</small>
+      </div>
 
-        <hr class="text-white-50">
+      <hr class="text-white-50 my-0 mx-3">
 
-        <ul class="nav flex-column">
+      <div class="flex-grow-1 overflow-auto py-3">
+        <ul class="nav flex-column px-2">
+          
           <li class="nav-item">
             <a class="nav-link text-white" routerLink="/dashboard" routerLinkActive="active">
-              <i class="bi bi-house-door me-2"></i>
-              Dashboard
+              <i class="bi bi-house-door me-2"></i> Dashboard
             </a>
           </li>
+
           <li class="nav-item">
-            <a class="nav-link text-white" href="#">
-              <i class="bi bi-clock me-2"></i>
-              Asistencia
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="#">
-              <i class="bi bi-calendar-week me-2"></i>
-              Horarios
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="#">
-              <i class="bi bi-send-check me-2"></i>
-              Solicitudes
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="#">
-              <i class="bi bi-diagram-3 me-2"></i>
-              Organigrama
+            <a class="nav-link text-white" routerLink="/asistencia" routerLinkActive="active">
+              <i class="bi bi-clock me-2"></i> Asistencia
             </a>
           </li>
           
-          <!-- Panel Admin solo para ADMIN/SUPERVISOR -->
-          <li *ngIf="isAdmin() || isSupervisor()" class="nav-item mt-3">
-            <div class="nav-link text-warning">
-              <i class="bi bi-shield-check me-2"></i>
-              Panel Admin
-            </div>
-            <ul class="nav flex-column ps-3">
-              <li class="nav-item">
-                <a class="nav-link text-white-75" href="#">Empleados</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link text-white-75" href="#">Reportes</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link text-white-75" href="#">Configuración</a>
-              </li>
-            </ul>
+          <li class="nav-item">
+            <a class="nav-link text-white" routerLink="/horarios" routerLinkActive="active">
+              <i class="bi bi-calendar-week me-2"></i> Horarios
+            </a>
           </li>
-        </ul>
+          
+          <li class="nav-item">
+            <a class="nav-link text-white" routerLink="/solicitudes" routerLinkActive="active">
+              <i class="bi bi-send-check me-2"></i> Solicitudes
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a class="nav-link text-white" routerLink="/organigrama" routerLinkActive="active">
+              <i class="bi bi-diagram-3 me-2"></i> Organigrama
+            </a>
+          </li>
+          
+          <ng-container *ngIf="isAdmin() || isSupervisor()">
+            <li class="nav-item mt-4 mb-2 ps-3">
+              <span class="text-warning small fw-bold text-uppercase ls-1">Administración</span>
+            </li>
+            
+            <li class="nav-item">
+              <a class="nav-link text-white" routerLink="/empleados" routerLinkActive="active">
+                <i class="bi bi-people me-2"></i> Empleados
+              </a>
+            </li>
+            </ng-container>
 
-        <!-- User Info -->
-        <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-primary-dark">
-          <div class="text-center text-white">
-            <small class="d-block">{{ currentEmpleado?.nombre?.split(' ')[0] || 'Usuario' }}</small>
-            <small class="text-white-50">{{ currentEmpleado?.rol?.toUpperCase() || 'ROL' }}</small>
-          </div>
-          <button class="btn btn-outline-light btn-sm w-100 mt-2" (click)="logout()">
-            <i class="bi bi-box-arrow-right me-1"></i>Cerrar Sesión
-          </button>
-        </div>
+        </ul>
       </div>
+
+      <div class="p-3 bg-primary-dark border-top border-white-50">
+        <div class="d-flex align-items-center mb-2">
+           <img [src]="fotoUrl" (error)="onImageError($event)"
+               class="rounded-circle border border-white me-2 bg-white" 
+               width="40" height="40" style="object-fit: cover;">
+               
+           <div class="overflow-hidden">
+             <div class="text-white fw-bold text-truncate" style="font-size: 0.9rem;">
+               {{ currentEmpleado?.nombre?.split(' ')[0] }}
+             </div>
+             <div class="text-white-50 small" style="font-size: 0.75rem;">
+               {{ currentEmpleado?.rol | uppercase }}
+             </div>
+           </div>
+        </div>
+        <button class="btn btn-outline-light btn-sm w-100" (click)="logout()">
+          <i class="bi bi-box-arrow-right me-1"></i> Salir
+        </button>
+      </div>
+
     </nav>
 
-    <!-- Main Content -->
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 bg-light">
-      <router-outlet></router-outlet>
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-0 bg-light h-100 overflow-auto">
+      
+      <div class="d-md-none bg-primary p-3 text-white d-flex justify-content-between align-items-center sticky-top">
+        <span class="fw-bold">
+          <i class="bi bi-clock-history me-2"></i>Control NGR
+        </span>
+      
+        <a
+          class="btn btn-outline-light btn-sm d-flex align-items-center"
+          routerLink="/dashboard"
+          title="Ir al inicio">
+          <i class="bi bi-house-door"></i>
+        </a>
+      </div>
+      
+      
+      <div class="p-4">
+        <router-outlet></router-outlet>
+      </div>
     </main>
   </div>
 </div>

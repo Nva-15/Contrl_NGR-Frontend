@@ -4,38 +4,78 @@
   background-color: #f8f9fa;
 }
 
-.navbar {
-  padding: 0.75rem 0;
+/* Contenedor principal */
+.container {
+  width: 100%;
+  max-width: 98%;
+  padding: 0 1.5rem;
 }
 
-.navbar-brand {
-  font-size: 1.5rem;
+/* PC / Laptop */
+@media (min-width: 992px) {
+  .container {
+    max-width: 98vw;
+    padding: 0 2rem;
+  }
 }
 
+/* Navbar */
+.navbar { padding: 0.75rem 0; }
+.navbar-brand { font-size: 1.4rem; }
+
+/* Tarjetas */
 .card {
   border-radius: 12px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 1px solid rgba(0,0,0,0.05);
+  background: #fff;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.1);
 }
 
 .card-header {
-  border-radius: 12px 12px 0 0 !important;
   padding: 1rem 1.25rem;
+  border-radius: 12px 12px 0 0;
 }
 
+/* Tarjeta principal */
+.card-protagonist {
+  border: 1px solid rgba(13,110,253,0.25);
+}
+
+/* PC */
+@media (min-width: 992px) {
+  .card-protagonist {
+    transform: scale(1.03);
+    z-index: 2;
+    box-shadow: 0 1rem 2.5rem rgba(0,0,0,0.15);
+  }
+
+  .card-protagonist:hover {
+    transform: scale(1.05) translateY(-4px);
+  }
+}
+
+/* Tablet y móvil */
+@media (max-width: 991px) {
+  .card-protagonist {
+    transform: none;
+    margin-bottom: 1.25rem;
+  }
+}
+
+/* Botones */
 .btn {
   border-radius: 8px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .btn-lg {
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.4rem;
 }
 
 .btn:disabled {
@@ -43,54 +83,73 @@
   cursor: not-allowed;
 }
 
-.badge {
-  font-weight: 500;
-  letter-spacing: 0.3px;
-}
-
+/* Listas y tablas */
 .list-group-item {
   transition: background-color 0.2s ease;
 }
 
 .list-group-item:hover {
-  background-color: rgba(0,123,255,0.05);
-}
-
-.cursor-pointer {
-  cursor: pointer;
+  background-color: rgba(13,110,253,0.05);
 }
 
 .table-sm td {
-  padding: 0.25rem 0;
+  padding: 0.3rem 0;
 }
 
-footer {
-  margin-top: auto;
+/* Imagen perfil */
+.profile-img-responsive {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 5px solid #fff;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Responsive adjustments */
+.profile-img-responsive:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 25px rgba(13,110,253,0.25);
+}
+
+/* Laptop */
+@media (max-width: 1200px) {
+  .profile-img-responsive {
+    width: 140px;
+    height: 140px;
+  }
+}
+
+/* Tablet */
 @media (max-width: 768px) {
+  .container {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
   .navbar-nav {
     margin-top: 1rem;
   }
-  
+
   .card-body {
     padding: 1rem;
   }
-  
+
   .btn-lg {
-    padding: 0.6rem 1rem;
+    padding: 0.6rem 1.1rem;
     font-size: 0.9rem;
+  }
+
+  .profile-img-responsive {
+    width: 120px;
+    height: 120px;
   }
 }
 
-/* Loading spinner */
-.spinner-border {
-  width: 3rem;
-  height: 3rem;
-}
-
-/* Image styling */
-img {
-  object-fit: cover;
+/* Móvil */
+@media (max-width: 576px) {
+  .profile-img-responsive {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 1rem;
+  }
 }

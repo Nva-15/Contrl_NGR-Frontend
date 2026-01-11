@@ -1,47 +1,53 @@
 :host {
   display: block;
   height: 100vh;
+  overflow: hidden; /* Evita doble scroll */
 }
 
+/* Sidebar Fijo */
 .sidebar {
-  min-height: 100vh;
-  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  height: 100vh;
+  z-index: 100;
+  box-shadow: 4px 0 10px rgba(0,0,0,0.1);
 }
 
+/* Enlaces */
 .nav-link {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-bottom: 0.25rem;
+  padding: 0.8rem 1rem;
+  margin-bottom: 2px;
+  border-radius: 6px;
   transition: all 0.2s ease;
+  border-left: 4px solid transparent; /* Preparado para active */
 }
 
 .nav-link:hover {
   background-color: rgba(255,255,255,0.1);
-  transform: translateX(5px);
+  transform: translateX(4px);
 }
 
+/* Estado Activo (Página Actual) */
 .nav-link.active {
-  background-color: rgba(255,255,255,0.2);
-  font-weight: 500;
+  background-color: rgba(255,255,255,0.15);
+  font-weight: 600;
+  border-left-color: #ffc107; /* Amarillo */
 }
 
 .bg-primary-dark {
-  background-color: #0056b3;
+  background-color: rgba(0, 0, 0, 0.2);
 }
 
+.ls-1 {
+  letter-spacing: 1px;
+}
+
+/* Contenido Principal */
 main {
-  padding-top: 1rem;
-  overflow-y: auto;
-  max-height: 100vh;
+  height: 100vh;
 }
-
-/* Responsive */
-@media (max-width: 768px) {
-  .sidebar {
-    min-height: auto;
-  }
-  
-  main {
-    padding-top: 1rem;
-  }
+/* OCULTAR BOTÓN CERRAR SESIÓN EN MÓVIL */
+.btn-logout,
+.logout-btn,
+#logout,
+.cerrar-sesion {
+    display: none !important;
 }

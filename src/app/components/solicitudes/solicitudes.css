@@ -1,36 +1,147 @@
+/* =====================
+   ESTILOS GENERALES
+===================== */
+
+.container {
+    max-width: 95%;
+}
+
 .card {
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
 }
 
 .table th {
     font-weight: 600;
     text-transform: uppercase;
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
+    font-size: 0.8rem;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+.table td {
+    vertical-align: middle;
+    white-space: nowrap;
 }
 
 .badge {
     font-weight: 500;
-    padding: 0.5em 0.8em;
+    padding: 0.45em 0.75em;
 }
 
 .nav-tabs .nav-link {
     color: #495057;
     border: none;
     border-bottom: 3px solid transparent;
-    padding: 10px 20px;
+    padding: 10px 16px;
     font-weight: 500;
-}
-
-.nav-tabs .nav-link:hover {
-    color: #0d6efd;
-    background-color: transparent;
-    border-color: transparent;
 }
 
 .nav-tabs .nav-link.active {
     color: #0d6efd;
     border-bottom: 3px solid #0d6efd;
     background-color: transparent;
+}
+
+/* =====================
+   TABLAS RESPONSIVAS
+===================== */
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Evita que se oculte información */
+.table td.text-truncate {
+    max-width: none !important;
+    white-space: normal !important;
+}
+
+/* =====================
+   PC / LAPTOP (>=1200px)
+===================== */
+
+@media (min-width: 1200px) {
+    .container {
+        max-width: 98%;
+    }
+
+    .table th,
+    .table td {
+        font-size: 0.95rem;
+    }
+}
+
+/* =====================
+   TABLET (768px - 1199px)
+===================== */
+
+@media (max-width: 1199px) {
+    .container {
+        max-width: 100%;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .table th,
+    .table td {
+        font-size: 0.85rem;
+    }
+}
+
+/* =====================
+   MÓVIL (<768px)
+===================== */
+
+@media (max-width: 767px) {
+
+    /* Tabs más compactos */
+    .nav-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    .nav-tabs .nav-link {
+        font-size: 0.8rem;
+        padding: 8px 12px;
+        white-space: nowrap;
+    }
+
+    /* Tablas tipo "cards" */
+    table thead {
+        display: none;
+    }
+
+    table tbody tr {
+        display: block;
+        margin-bottom: 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 10px;
+        background: #fff;
+    }
+
+    table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 6px 0;
+        border: none;
+        white-space: normal;
+        font-size: 0.85rem;
+    }
+
+    table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #6c757d;
+        margin-right: 10px;
+    }
+
+    /* Botones más grandes */
+    .btn {
+        font-size: 0.85rem;
+        padding: 6px 10px;
+    }
 }

@@ -2,24 +2,20 @@
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
     <div class="container-fluid">
       <a class="navbar-brand fw-bold" href="#">
-        <i class="bi bi-clock-history me-2"></i>
-        Control NGR
+        <i class="bi bi-clock-history me-2"></i>Control NGR
       </a>
       
       <div class="navbar-nav ms-auto">
         <div class="nav-item dropdown">
           <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
             <img [src]="fotoUrl" 
-                 width="30" 
-                 height="30" 
+                 width="30" height="30" 
                  class="rounded-circle me-2 border"
                  alt="{{currentEmpleado?.nombre}}"
                  (error)="onImageError($event)"
                  style="object-fit: cover;">
             {{ currentEmpleado?.nombre?.split(' ')[0] }} 
-            <span class="badge bg-light text-dark ms-1">
-              {{ currentEmpleado?.rol | uppercase }}
-            </span>
+            <span class="badge bg-light text-dark ms-1">{{ currentEmpleado?.rol | uppercase }}</span>
           </a>
           <ul class="dropdown-menu dropdown-menu-end">
             <li>
@@ -34,18 +30,19 @@
   </nav>
 
   <div class="container mt-4">
+    
     <div class="row mb-4">
       <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-3">
           <div>
             <h2 class="text-primary mb-1">Bienvenido, {{ currentEmpleado?.nombre }}</h2>
             <p class="text-muted mb-0">
               <i class="bi bi-calendar-date me-1"></i>
-              {{ fechaActual | date:'fullDate' }}
+              {{ fechaActual | date:'fullDate' | titlecase }}
             </p>
           </div>
-          <div class="text-end">
-            <div class="badge bg-light text-dark fs-6 p-2">
+          <div class="d-none d-md-block">
+            <div class="badge bg-light text-dark fs-6 p-2 border">
               <i class="bi bi-person-badge me-1"></i>
               {{ currentEmpleado?.cargo || 'Empleado' }}
             </div>
@@ -54,218 +51,168 @@
       </div>
     </div>
 
-    <div class="row g-4 mb-5">
-      <div class="col-md-6 col-lg-4">
+    <div class="row g-4 mb-5 align-items-start">
+      
+      <div class="col-md-6 col-lg-3 order-2 order-lg-1">
         <div class="card h-100 shadow-sm border-0">
           <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-              <i class="bi bi-clock-fill me-2"></i>Marcar Asistencia
-            </h5>
+            <h5 class="mb-0 fs-6"><i class="bi bi-clock-fill me-2"></i>Asistencia</h5>
           </div>
           <div class="card-body">
             <div *ngIf="isLoading" class="text-center py-4">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Cargando...</span>
-              </div>
+              <div class="spinner-border text-primary" role="status"></div>
             </div>
 
             <div *ngIf="!isLoading">
-              <div class="text-center mb-4">
-                <div class="mb-2">
-                  <span class="badge bg-{{getBadgeColor()}} fs-6 p-2">
-                    {{ getEstadoAsistencia() }}
-                  </span>
-                </div>
-                <div class="row">
-                  <div class="col-6">
-                    <small class="text-muted d-block">Entrada</small>
-                    <h5 class="fw-bold">{{ getHoraFormateada(asistenciaHoy?.horaEntrada) }}</h5>
+              <div class="text-center mb-3">
+                <span class="badge bg-{{getBadgeColor()}} fs-6 mb-2">{{ getEstadoAsistencia() }}</span>
+                <div class="row g-1">
+                  <div class="col-6 border-end">
+                    <small class="text-muted d-block" style="font-size:0.75rem">Entrada</small>
+                    <h5 class="fw-bold mb-0">{{ getHoraFormateada(asistenciaHoy?.horaEntrada) }}</h5>
                   </div>
                   <div class="col-6">
-                    <small class="text-muted d-block">Salida</small>
-                    <h5 class="fw-bold">{{ getHoraFormateada(asistenciaHoy?.horaSalida) }}</h5>
+                    <small class="text-muted d-block" style="font-size:0.75rem">Salida</small>
+                    <h5 class="fw-bold mb-0">{{ getHoraFormateada(asistenciaHoy?.horaSalida) }}</h5>
                   </div>
                 </div>
               </div>
 
               <div class="d-grid gap-2">
-                <button 
-                  class="btn btn-success btn-lg py-3" 
-                  (click)="tipoMarcaje = 'entrada'; marcarAsistencia()"
-                  [disabled]="!puedeMarcarEntrada()">
-                  <i class="bi bi-box-arrow-in-right me-2"></i>
-                  Marcar Entrada
+                <button class="btn btn-success py-2" (click)="tipoMarcaje = 'entrada'; marcarAsistencia()" [disabled]="!puedeMarcarEntrada()">
+                  <i class="bi bi-box-arrow-in-right me-1"></i> Entrada
                 </button>
-                
-                <button 
-                  class="btn btn-danger btn-lg py-3" 
-                  (click)="tipoMarcaje = 'salida'; marcarAsistencia()"
-                  [disabled]="!puedeMarcarSalida()">
-                  <i class="bi bi-box-arrow-right me-2"></i>
-                  Marcar Salida
+                <button class="btn btn-danger py-2" (click)="tipoMarcaje = 'salida'; marcarAsistencia()" [disabled]="!puedeMarcarSalida()">
+                  <i class="bi bi-box-arrow-right me-1"></i> Salida
                 </button>
               </div>
 
               <div class="mt-3">
-                <label class="form-label small">Observaciones (opcional)</label>
-                <textarea 
-                  class="form-control" 
-                  rows="2" 
-                  [(ngModel)]="observaciones"
-                  placeholder="Ej: Reunión, visita externa, etc."></textarea>
+                <textarea class="form-control form-control-sm" rows="2" [(ngModel)]="observaciones" placeholder="Observaciones..."></textarea>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm border-0">
-          <div class="card-header bg-info text-white">
-            <h5 class="mb-0">
-              <i class="bi bi-person-badge me-2"></i>Mi Información
-            </h5>
+      <div class="col-md-12 col-lg-6 order-1 order-lg-2">
+        <div class="card h-100 shadow-lg border-primary border-opacity-25" style="transform: scale(1.01);">
+          <div class="card-header bg-info text-white py-3 text-center">
+            <h4 class="mb-0"><i class="bi bi-person-circle me-2"></i>Mi Información</h4>
           </div>
-          <div class="card-body">
-            <div class="d-flex align-items-start">
-              <img [src]="fotoUrl" 
-                   class="rounded-circle me-3 border shadow-sm" 
-                   width="100" 
-                   height="100" 
-                   alt="Foto de {{currentEmpleado?.nombre}}"
-                   (error)="onImageError($event)"
-                   style="object-fit: cover;">
-              <div class="flex-grow-1">
-                <h5 class="mb-2">{{ currentEmpleado?.nombre }}</h5>
-                <table class="table table-sm table-borderless">
-                  <tr>
-                    <td width="120"><strong>DNI:</strong></td>
-                    <td>{{ currentEmpleado?.dni }}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Cargo:</strong></td>
-                    <td>{{ currentEmpleado?.cargo }}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Nivel:</strong></td>
-                    <td>{{ currentEmpleado?.nivel }}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Usuario:</strong></td>
-                    <td>{{ currentEmpleado?.username }}</td>
-                  </tr>
-                </table>
+          <div class="card-body p-4">
+            
+            <div class="d-flex flex-column flex-sm-row align-items-center justify-content-center gap-4">
+              <div class="position-relative">
+                <img [src]="fotoUrl" 
+                     class="rounded-circle border border-4 border-white shadow profile-img-responsive" 
+                     alt="Foto"
+                     (error)="onImageError($event)">
+                <span class="position-absolute bottom-0 end-0 p-2 bg-success border border-light rounded-circle"></span>
+              </div>
+
+              <div class="text-center text-sm-start flex-grow-1">
+                <h3 class="fw-bold text-primary mb-1">{{ currentEmpleado?.nombre }}</h3>
+                <p class="text-muted fs-5 mb-3">{{ currentEmpleado?.cargo }}</p>
+                
+                <div class="row g-3 justify-content-center justify-content-sm-start">
+                  <div class="col-auto text-center text-sm-start">
+                    <small class="text-uppercase text-muted fw-bold d-block" style="font-size: 0.7rem;">DNI</small>
+                    <span class="fs-6 fw-medium">{{ currentEmpleado?.dni }}</span>
+                  </div>
+                  <div class="col-auto text-center text-sm-start border-start ps-3">
+                    <small class="text-uppercase text-muted fw-bold d-block" style="font-size: 0.7rem;">Usuario</small>
+                    <span class="fs-6 fw-medium">{{ currentEmpleado?.username }}</span>
+                  </div>
+                  <div class="col-auto text-center text-sm-start border-start ps-3">
+                    <small class="text-uppercase text-muted fw-bold d-block" style="font-size: 0.7rem;">Nivel</small>
+                    <span class="badge bg-light text-dark border">{{ currentEmpleado?.nivel }}</span>
+                  </div>
+                </div>
+
+                <div class="mt-4">
+                  <button class="btn btn-outline-info w-100 rounded-pill">
+                    <i class="bi bi-pencil-square me-2"></i>Actualizar Datos
+                  </button>
+                </div>
               </div>
             </div>
-            <div class="mt-3">
-              <button class="btn btn-outline-info w-100">
-                <i class="bi bi-pencil me-1"></i>Editar Perfil
-              </button>
-            </div>
+
           </div>
         </div>
       </div>
 
-      <div class="col-md-12 col-lg-4">
+      <div class="col-md-6 col-lg-3 order-3 order-lg-3">
         <div class="card h-100 shadow-sm border-0">
           <div class="card-header bg-success text-white">
-            <h5 class="mb-0">
-              <i class="bi bi-lightning-charge me-2"></i>Acciones Rápidas
-            </h5>
+            <h5 class="mb-0 fs-6"><i class="bi bi-lightning-charge me-2"></i>Acciones</h5>
           </div>
-          <div class="card-body">
+          <div class="card-body p-0">
             <div class="list-group list-group-flush">
-              <a href="#" class="list-group-item list-group-item-action border-0 py-3">
-                <div class="d-flex align-items-center">
-                  <div class="bg-primary bg-opacity-10 rounded p-2 me-3">
-                    <i class="bi bi-calendar-week text-primary"></i>
-                  </div>
-                  <div>
-                    <h6 class="mb-1">Ver Mi Horario</h6>
-                    <small class="text-muted">Consulta tu horario semanal</small>
-                  </div>
+              <a href="#" class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center">
+                <i class="bi bi-calendar-week text-primary fs-4 me-3"></i>
+                <div class="lh-1">
+                  <h6 class="mb-0">Horario</h6>
+                  <small class="text-muted" style="font-size:0.75rem">Turno semanal</small>
                 </div>
               </a>
               
-              <a href="javascript:void(0)" (click)="irASolicitudes()" class="list-group-item list-group-item-action border-0 py-3">
-                <div class="d-flex align-items-center">
-                  <div class="bg-warning bg-opacity-10 rounded p-2 me-3">
-                    <i class="bi bi-send-check text-warning"></i>
-                  </div>
-                  <div>
-                    <h6 class="mb-1">Nueva Solicitud</h6>
-                    <small class="text-muted">Vacaciones o compensación</small>
-                  </div>
+              <a href="javascript:void(0)" (click)="irASolicitudes()" class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center">
+                <i class="bi bi-send-check text-warning fs-4 me-3"></i>
+                <div class="lh-1">
+                  <h6 class="mb-0">Solicitud</h6>
+                  <small class="text-muted" style="font-size:0.75rem">Permisos/Vac.</small>
                 </div>
               </a>
               
-              <a href="#" class="list-group-item list-group-item-action border-0 py-3">
-                <div class="d-flex align-items-center">
-                  <div class="bg-info bg-opacity-10 rounded p-2 me-3">
-                    <i class="bi bi-graph-up text-info"></i>
-                  </div>
-                  <div>
-                    <h6 class="mb-1">Reportes</h6>
-                    <small class="text-muted">Mis asistencias mensuales</small>
-                  </div>
+              <a href="#" class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center">
+                <i class="bi bi-graph-up text-info fs-4 me-3"></i>
+                <div class="lh-1">
+                  <h6 class="mb-0">Reportes</h6>
+                  <small class="text-muted" style="font-size:0.75rem">Mis registros</small>
                 </div>
               </a>
               
-              <a *ngIf="isAdmin() || isSupervisor()" 
-                 href="#" class="list-group-item list-group-item-action border-0 py-3">
-                <div class="d-flex align-items-center">
-                  <div class="bg-danger bg-opacity-10 rounded p-2 me-3">
-                    <i class="bi bi-people text-danger"></i>
-                  </div>
-                  <div>
-                    <h6 class="mb-1">Gestionar Empleados</h6>
-                    <small class="text-muted">Panel de administración</small>
-                  </div>
+              <a *ngIf="isAdmin() || isSupervisor()" href="#" class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center bg-danger bg-opacity-10">
+                <i class="bi bi-people text-danger fs-4 me-3"></i>
+                <div class="lh-1">
+                  <h6 class="mb-0 text-danger">Empleados</h6>
+                  <small class="text-danger-50" style="font-size:0.75rem">Gestión Admin</small>
                 </div>
               </a>
             </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="row">
+    </div> 
+    <div class="row g-4">
       <div class="col-md-6">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm h-100">
           <div class="card-header bg-light">
-            <h6 class="mb-0">
-              <i class="bi bi-calendar-day me-2"></i>Estado del Día
-            </h6>
+            <h6 class="mb-0"><i class="bi bi-calendar-day me-2"></i>Estado del Día</h6>
           </div>
           <div class="card-body">
-            <div class="row text-center">
-              <div class="col-4">
-                <div class="border-end">
-                  <h3 class="text-primary mb-1">{{ fechaActual | date:'dd' }}</h3>
-                  <small class="text-muted">Día</small>
-                </div>
+            <div class="row text-center mb-3">
+              <div class="col-4 border-end">
+                <h3 class="text-primary mb-0">{{ fechaActual | date:'dd' }}</h3>
+                <small class="text-muted">Día</small>
+              </div>
+              <div class="col-4 border-end">
+                <h3 class="text-info mb-0">{{ fechaActual | date:'MM' }}</h3>
+                <small class="text-muted">Mes</small>
               </div>
               <div class="col-4">
-                <div class="border-end">
-                  <h3 class="text-info mb-1">{{ fechaActual | date:'MM' }}</h3>
-                  <small class="text-muted">Mes</small>
-                </div>
-              </div>
-              <div class="col-4">
-                <div>
-                  <h3 class="text-success mb-1">{{ fechaActual | date:'yyyy' }}</h3>
-                  <small class="text-muted">Año</small>
-                </div>
+                <h3 class="text-success mb-0">{{ fechaActual | date:'yyyy' }}</h3>
+                <small class="text-muted">Año</small>
               </div>
             </div>
-            <hr>
-            <div class="text-center">
-              <h5 class="mb-2">Resumen de Hoy</h5>
-              <p class="mb-0" *ngIf="asistenciaHoy?.observaciones">
-                <strong>Observaciones:</strong> {{ asistenciaHoy?.observaciones }}
+            <div class="bg-light p-3 rounded text-center border">
+              <h6 class="mb-2 fw-bold">Resumen de Hoy</h6>
+              <p class="mb-0 text-dark" *ngIf="asistenciaHoy?.observaciones">
+                <i class="bi bi-chat-quote me-1"></i>{{ asistenciaHoy?.observaciones }}
               </p>
-              <p class="text-muted small mt-2" *ngIf="!asistenciaHoy?.observaciones">
-                No hay observaciones para hoy
+              <p class="text-muted small mb-0" *ngIf="!asistenciaHoy?.observaciones">
+                <i class="bi bi-dash-circle me-1"></i>No hay observaciones para hoy
               </p>
             </div>
           </div>
@@ -273,40 +220,39 @@
       </div>
 
       <div class="col-md-6">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm h-100">
           <div class="card-header bg-light">
-            <h6 class="mb-0">
-              <i class="bi bi-bell me-2"></i>Próximos Eventos
-            </h6>
+            <h6 class="mb-0"><i class="bi bi-bell me-2"></i>Próximos Eventos</h6>
           </div>
-          <div class="card-body">
+          <div class="card-body p-0">
             <div class="list-group list-group-flush">
-              <div class="list-group-item border-0 px-0">
-                <div class="d-flex w-100 justify-content-between">
-                  <h6 class="mb-1">Reunión de Equipo</h6>
-                  <small class="text-muted">Hoy, 10:00 AM</small>
+              <div class="list-group-item px-3 py-3">
+                <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                  <h6 class="mb-0 fw-bold text-primary">Reunión de Equipo</h6>
+                  <span class="badge bg-primary bg-opacity-10 text-primary">Hoy, 10:00 AM</span>
                 </div>
-                <p class="mb-1 small text-muted">Sala de Conferencias Principal</p>
+                <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>Sala de Conferencias Principal</small>
               </div>
-              <div class="list-group-item border-0 px-0">
-                <div class="d-flex w-100 justify-content-between">
-                  <h6 class="mb-1">Entrega de Reportes</h6>
-                  <small class="text-muted">Viernes</small>
+              <div class="list-group-item px-3 py-3">
+                <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                  <h6 class="mb-0 fw-bold text-dark">Entrega de Reportes</h6>
+                  <span class="badge bg-secondary bg-opacity-10 text-dark">Viernes</span>
                 </div>
-                <p class="mb-1 small text-muted">Reporte mensual de actividades</p>
+                <small class="text-muted"><i class="bi bi-file-text me-1"></i>Reporte mensual de actividades</small>
               </div>
-              <div class="list-group-item border-0 px-0">
-                <div class="d-flex w-100 justify-content-between">
-                  <h6 class="mb-1">Capacitación</h6>
-                  <small class="text-muted">Próxima semana</small>
+              <div class="list-group-item px-3 py-3">
+                <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                  <h6 class="mb-0 fw-bold text-dark">Capacitación</h6>
+                  <span class="badge bg-info bg-opacity-10 text-info">Próxima semana</span>
                 </div>
-                <p class="mb-1 small text-muted">Nuevas políticas de la empresa</p>
+                <small class="text-muted"><i class="bi bi-book me-1"></i>Nuevas políticas de la empresa</small>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
   </div>
 
   <footer class="mt-5 py-3 bg-light border-top">
@@ -314,8 +260,7 @@
       <div class="row">
         <div class="col-md-6">
           <small class="text-muted">
-            <i class="bi bi-shield-check me-1"></i>
-            Sistema Control NGR v1.0 - Gestión de Asistencia
+            <i class="bi bi-shield-check me-1"></i> Sistema Control NGR v1.0
           </small>
         </div>
         <div class="col-md-6 text-end">
