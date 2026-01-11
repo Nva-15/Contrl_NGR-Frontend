@@ -1,1 +1,79 @@
-<p>organigrama works!</p>
+<div class="container-fluid mt-4 mb-5">
+  
+    <div class="text-center mb-5">
+      <h2 class="text-primary fw-bold"><i class="bi bi-diagram-3 me-2"></i>Organigrama Institucional</h2>
+      <p class="text-muted">Estructura jerárquica del equipo NGR</p>
+    </div>
+  
+    <div *ngIf="isLoading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+    </div>
+  
+    <div *ngIf="!isLoading" class="org-tree">
+      
+      <div class="level-row" *ngIf="nivelJefes.length > 0">
+        <div class="node-wrapper" *ngFor="let emp of nivelJefes">
+          <div class="card org-card border-primary shadow">
+            <div class="card-body text-center p-3">
+              <img [src]="getFoto(emp)" (error)="onImageError($event)" 
+                   class="rounded-circle border border-3 border-white shadow-sm mb-2 org-img">
+              <h6 class="fw-bold mb-0 text-primary">{{ emp.nombre }}</h6>
+              <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">{{ emp.cargo || 'Jefe' }}</small>
+            </div>
+          </div>
+          <div class="vertical-line"></div>
+        </div>
+      </div>
+  
+      <div class="connector-row" *ngIf="nivelJefes.length > 0 && nivelSupervisores.length > 0">
+        <div class="horizontal-bar"></div>
+        <div class="vertical-line-center"></div>
+      </div>
+  
+      <div class="level-row" *ngIf="nivelSupervisores.length > 0">
+        <div class="node-wrapper" *ngFor="let emp of nivelSupervisores">
+          <div class="card org-card border-info shadow-sm">
+            <div class="card-body text-center p-2">
+              <img [src]="getFoto(emp)" (error)="onImageError($event)" 
+                   class="rounded-circle border border-2 border-white mb-2 org-img-sm">
+              <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.9rem;">{{ emp.nombre }}</h6>
+              <span class="badge bg-info text-dark mt-1">{{ emp.cargo || 'Supervisor' }}</span>
+            </div>
+          </div>
+          <div class="vertical-line"></div>
+        </div>
+      </div>
+  
+      <div class="connector-row" *ngIf="nivelSupervisores.length > 0 && nivelOperativo.length > 0">
+        <div class="horizontal-bar"></div>
+        <div class="vertical-line-center"></div>
+      </div>
+  
+      <div class="level-row wrap-content" *ngIf="nivelOperativo.length > 0">
+        <div class="node-wrapper-mini" *ngFor="let emp of nivelOperativo">
+          <div class="card org-card-mini h-100 border-0 shadow-sm hover-effect">
+            <div class="card-body p-2 d-flex align-items-center">
+              <img [src]="getFoto(emp)" (error)="onImageError($event)" 
+                   class="rounded-circle me-2" width="35" height="35" style="object-fit: cover;">
+              <div class="text-start lh-1">
+                <div class="fw-bold text-truncate" style="max-width: 130px; font-size: 0.85rem;">
+                  {{ emp.nombre }}
+                </div>
+                <small class="text-muted" style="font-size: 0.7rem;">{{ emp.cargo || 'Técnico' }}</small>
+              </div>
+            </div>
+            <div class="card-footer p-0 border-0" style="height: 3px;" 
+                 [ngClass]="{
+                   'bg-success': emp.cargo?.toLowerCase()?.includes('tecnico'),
+                   'bg-warning': emp.cargo?.toLowerCase()?.includes('bo'),
+                   'bg-danger': emp.cargo?.toLowerCase()?.includes('hd'),
+                   'bg-dark': emp.cargo?.toLowerCase()?.includes('noc')
+                 }"></div>
+          </div>
+        </div>
+      </div>
+  
+    </div>
+  </div>

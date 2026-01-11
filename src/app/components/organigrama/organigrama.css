@@ -1,0 +1,118 @@
+/* Contenedor General */
+.org-tree {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* Filas de Niveles */
+.level-row {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    width: 100%;
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.level-row.wrap-content {
+    flex-wrap: wrap; /* El último nivel permite saltar de línea */
+    gap: 1rem;
+    max-width: 1200px; /* Ancho máximo para la base de la pirámide */
+}
+
+/* Tarjetas */
+.org-card {
+    width: 220px;
+    transition: transform 0.3s ease;
+    z-index: 2;
+    position: relative;
+    background: white;
+}
+
+.org-card:hover {
+    transform: translateY(-5px);
+}
+
+.org-card-mini {
+    width: 190px;
+    background: #f8f9fa;
+}
+
+.hover-effect:hover {
+    background: white;
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+
+/* Imágenes */
+.org-img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+}
+
+.org-img-sm {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+}
+
+/* --- LÍNEAS CONECTORAS (MAGIA CSS) --- */
+
+/* Línea vertical pequeña debajo de cada tarjeta superior */
+.node-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.vertical-line {
+    width: 2px;
+    height: 20px;
+    background-color: #ccc;
+    margin-top: -1px; /* Pegado a la tarjeta */
+}
+
+/* Fila conectora horizontal entre niveles */
+.connector-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px; /* Espacio antes del siguiente nivel */
+}
+
+.horizontal-bar {
+    width: 50%; /* Ancho de la línea horizontal que agrupa */
+    height: 2px;
+    background-color: #ccc;
+    margin-top: -20px; /* Subir para conectar con las líneas verticales de arriba */
+}
+
+.vertical-line-center {
+    width: 2px;
+    height: 20px;
+    background-color: #ccc;
+}
+
+/* Ajustes Responsive */
+@media (max-width: 768px) {
+    .level-row {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .horizontal-bar {
+        display: none; /* En móvil quitamos las líneas complejas */
+    }
+    
+    .vertical-line, .vertical-line-center {
+        display: none;
+    }
+    
+    .org-card {
+        width: 100%;
+        max-width: 300px;
+    }
+}
