@@ -1,5 +1,4 @@
 <div class="container-fluid">
-  <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
     <div class="container-fluid">
       <a class="navbar-brand fw-bold" href="#">
@@ -7,75 +6,34 @@
         Control NGR
       </a>
       
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav me-auto">
-          <li class="nav-item">
-            <a class="nav-link active" routerLink="/dashboard">
-              <i class="bi bi-house-door me-1"></i>Inicio
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">
-              <i class="bi bi-calendar-week me-1"></i>Horarios
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">
-              <i class="bi bi-send-check me-1"></i>Solicitudes
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">
-              <i class="bi bi-diagram-3 me-1"></i>Organigrama
-            </a>
-          </li>
-          <li class="nav-item" *ngIf="isAdmin() || isSupervisor()">
-            <a class="nav-link text-warning" href="#">
-              <i class="bi bi-shield-check me-1"></i>Administración
-            </a>
-          </li>
-        </ul>
-        
-        <div class="navbar-nav">
-          <div class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
-              <i class="bi bi-person-circle me-1"></i>
-              {{ currentEmpleado?.nombre.split(' ')[0] }}
-              <span class="badge bg-light text-dark ms-1">
-                {{ currentEmpleado?.rol | uppercase }}
-              </span>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li>
-                <a class="dropdown-item" href="#">
-                  <i class="bi bi-person me-2"></i>Mi Perfil
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="#">
-                  <i class="bi bi-clock-history me-2"></i>Mis Asistencias
-                </a>
-              </li>
-              <li><hr class="dropdown-divider"></li>
-              <li>
-                <a class="dropdown-item text-danger" href="#" (click)="logout(); $event.preventDefault()">
-                  <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
-                </a>
-              </li>
-            </ul>
-          </div>
+      <div class="navbar-nav ms-auto">
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+            <img [src]="fotoUrl" 
+                 width="30" 
+                 height="30" 
+                 class="rounded-circle me-2 border"
+                 alt="{{currentEmpleado?.nombre}}"
+                 (error)="onImageError($event)"
+                 style="object-fit: cover;">
+            {{ currentEmpleado?.nombre?.split(' ')[0] }} 
+            <span class="badge bg-light text-dark ms-1">
+              {{ currentEmpleado?.rol | uppercase }}
+            </span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item text-danger" href="#" (click)="logout(); $event.preventDefault()">
+                <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
   </nav>
 
-  <!-- Main Content -->
   <div class="container mt-4">
-    <!-- Bienvenida -->
     <div class="row mb-4">
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center">
@@ -89,16 +47,14 @@
           <div class="text-end">
             <div class="badge bg-light text-dark fs-6 p-2">
               <i class="bi bi-person-badge me-1"></i>
-              {{ currentEmpleado?.cargo }}
+              {{ currentEmpleado?.cargo || 'Empleado' }}
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Cards de Acción Rápida -->
     <div class="row g-4 mb-5">
-      <!-- Marcar Asistencia -->
       <div class="col-md-6 col-lg-4">
         <div class="card h-100 shadow-sm border-0">
           <div class="card-header bg-primary text-white">
@@ -114,7 +70,6 @@
             </div>
 
             <div *ngIf="!isLoading">
-              <!-- Estado Actual -->
               <div class="text-center mb-4">
                 <div class="mb-2">
                   <span class="badge bg-{{getBadgeColor()}} fs-6 p-2">
@@ -133,7 +88,6 @@
                 </div>
               </div>
 
-              <!-- Botones de Marcaje -->
               <div class="d-grid gap-2">
                 <button 
                   class="btn btn-success btn-lg py-3" 
@@ -152,7 +106,6 @@
                 </button>
               </div>
 
-              <!-- Observaciones -->
               <div class="mt-3">
                 <label class="form-label small">Observaciones (opcional)</label>
                 <textarea 
@@ -166,7 +119,6 @@
         </div>
       </div>
 
-      <!-- Mi Información -->
       <div class="col-md-6 col-lg-4">
         <div class="card h-100 shadow-sm border-0">
           <div class="card-header bg-info text-white">
@@ -176,11 +128,13 @@
           </div>
           <div class="card-body">
             <div class="d-flex align-items-start">
-              <img [src]="currentEmpleado?.foto || 'assets/perfil-default.png'" 
-                   class="rounded-circle me-3 border" 
+              <img [src]="fotoUrl" 
+                   class="rounded-circle me-3 border shadow-sm" 
                    width="100" 
                    height="100" 
-                   alt="Foto">
+                   alt="Foto de {{currentEmpleado?.nombre}}"
+                   (error)="onImageError($event)"
+                   style="object-fit: cover;">
               <div class="flex-grow-1">
                 <h5 class="mb-2">{{ currentEmpleado?.nombre }}</h5>
                 <table class="table table-sm table-borderless">
@@ -212,7 +166,6 @@
         </div>
       </div>
 
-      <!-- Acciones Rápidas -->
       <div class="col-md-12 col-lg-4">
         <div class="card h-100 shadow-sm border-0">
           <div class="card-header bg-success text-white">
@@ -276,9 +229,7 @@
       </div>
     </div>
 
-    <!-- Estadísticas y Estado -->
     <div class="row">
-      <!-- Estado del Día -->
       <div class="col-md-6">
         <div class="card shadow-sm">
           <div class="card-header bg-light">
@@ -321,7 +272,6 @@
         </div>
       </div>
 
-      <!-- Próximos Eventos -->
       <div class="col-md-6">
         <div class="card shadow-sm">
           <div class="card-header bg-light">
@@ -359,7 +309,6 @@
     </div>
   </div>
 
-  <!-- Footer -->
   <footer class="mt-5 py-3 bg-light border-top">
     <div class="container">
       <div class="row">

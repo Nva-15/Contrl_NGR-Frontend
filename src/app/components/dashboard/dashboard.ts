@@ -1,22 +1,28 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { AsistenciaService } from '../../services/asistencia';
+import { ImagenService } from '../../services/imagen';
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterLink, FormsModule],
+  standalone: true, // Asumo que es standalone por los imports
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
 export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private asistenciaService = inject(AsistenciaService);
+  private imagenService = inject(ImagenService);
   private router = inject(Router);
 
   currentEmpleado: any;
+  // Variable para guardar la URL estable de la foto
+  fotoUrl: string = '';
+  
   fechaActual = new Date();
   asistenciaHoy: any = null;
   isLoading = true;
@@ -32,7 +38,21 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    // CALCULAR LA URL DE LA FOTO UNA ÚNICA VEZ AQUÍ
+    // Esto evita el error NG0100
+    this.fotoUrl = this.imagenService.getEmpleadoFotoUrl(
+      this.currentEmpleado.foto, 
+      this.currentEmpleado.nombre
+    );
+    
+    console.log('🖼️ URL Foto generada:', this.fotoUrl);
+    
     this.cargarAsistenciaHoy();
+  }
+
+  // Método para manejar error de carga de imagen
+  onImageError(event: Event): void {
+    this.imagenService.handleImageError(event, this.currentEmpleado?.nombre);
   }
 
   cargarAsistenciaHoy() {
@@ -50,7 +70,6 @@ export class DashboardComponent implements OnInit {
       error: (error: any) => {
         console.error('Error cargando asistencia:', error);
         this.isLoading = false;
-        // Usar datos de ejemplo temporalmente
         this.asistenciaHoy = null;
       }
     });
@@ -104,7 +123,8 @@ export class DashboardComponent implements OnInit {
 
   getHoraFormateada(hora: string | undefined): string {
     if (!hora) return '--:--';
-    return hora.substring(0, 5);
+    // Asegurar formato HH:mm
+    return hora.length > 5 ? hora.substring(0, 5) : hora;
   }
 
   isAdmin(): boolean {
@@ -113,10 +133,6 @@ export class DashboardComponent implements OnInit {
 
   isSupervisor(): boolean {
     return this.authService.isSupervisor();
-  }
-
-  isTecnico(): boolean {
-    return this.authService.isTecnico();
   }
 
   logout() {
