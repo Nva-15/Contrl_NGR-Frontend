@@ -1,6 +1,8 @@
+// services/solicitudes.service.ts - SOLO MEJORAS EN MANEJO DE ERRORES
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { Solicitud, SolicitudResponse } from '../interfaces/solicitud';
 
 @Injectable({
@@ -12,7 +14,15 @@ export class SolicitudesService {
 
   // Crear una nueva solicitud
   crearSolicitud(solicitud: any): Observable<SolicitudResponse> {
-    return this.http.post<SolicitudResponse>(`${this.apiUrl}/crear`, solicitud);
+    return this.http.post<SolicitudResponse>(`${this.apiUrl}/crear`, solicitud).pipe(
+      catchError((error: HttpErrorResponse) => {
+        // Manejar error 409 (Conflict) específicamente
+        if (error.status === 409) {
+          return throwError(() => error.error.error || 'Conflicto de fechas detectado');
+        }
+        return throwError(() => error.error?.error || 'Error al crear solicitud');
+      })
+    );
   }
 
   // Obtener historial de mis solicitudes
@@ -30,8 +40,40 @@ export class SolicitudesService {
     return this.http.get<SolicitudResponse[]>(`${this.apiUrl}/todas`);
   }
 
+  // Obtener historial (excluyendo pendientes)
+  getHistorial(): Observable<SolicitudResponse[]> {
+    return this.http.get<SolicitudResponse[]>(`${this.apiUrl}/historial`);
+  }
+
   // Aprobar o Rechazar solicitud
-  gestionarSolicitud(id: number, estado: string, usuarioId: number): Observable<SolicitudResponse> {
-    return this.http.put<SolicitudResponse>(`${this.apiUrl}/gestionar/${id}`, { estado, usuarioId });
+  gestionarSolicitud(id: number, estado: string, usuarioId: number, comentarios?: string): Observable<SolicitudResponse> {
+    const payload: any = { estado, usuarioId };
+    if (comentarios) {
+      payload.comentarios = comentarios;
+    }
+    return this.http.put<SolicitudResponse>(`${this.apiUrl}/gestionar/${id}`, payload);
+  }
+
+  // Editar solicitud
+  editarSolicitud(id: number, datos: any): Observable<SolicitudResponse> {
+    return this.http.put<SolicitudResponse>(`${this.apiUrl}/editar/${id}`, datos);
+  }
+
+  // Verificar conflictos de fechas
+  verificarConflictos(empleadoId: number, fechaInicio: string, fechaFin: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/verificar-conflictos`, {
+      empleadoId,
+      fechaInicio,
+      fechaFin
+    });
+  }
+
+  // Exportar solicitudes
+  exportarSolicitudes(tipo: string, empleadoId?: number, formato: string = 'json'): Observable<any> {
+    let params = new HttpParams().set('formato', formato);
+    if (empleadoId) {
+      params = params.set('empleadoId', empleadoId.toString());
+    }
+    return this.http.get(`${this.apiUrl}/exportar/${tipo}`, { params });
   }
 }
