@@ -1,4 +1,3 @@
-<!-- components/solicitudes/solicitudes.html -->
 <div class="container mt-4">
   
   <div class="d-flex justify-content-between align-items-center mb-4">
@@ -12,8 +11,8 @@
     </button>
   </div>
 
-  <!-- Filtros y Exportación -->
-  <div *ngIf="activeTab !== 'crear'" class="mb-4">
+  <!-- Filtros y Exportación para MIS SOLICITUDES -->
+  <div *ngIf="activeTab === 'mis-solicitudes'" class="mb-4">
     <div class="card shadow-sm border-0 bg-light">
       <div class="card-body py-3">
         <div class="row g-2 align-items-center">
@@ -24,25 +23,13 @@
             </span>
           </div>
           
-          <!-- Filtro por nombre (solo para jefes en historial) -->
-          <div class="col-md-3" *ngIf="esJefe() && activeTab === 'historial'">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-white border-end-0">
-                <i class="bi bi-search text-muted"></i>
-              </span>
-              <input type="text" class="form-control border-start-0" 
-                     placeholder="Buscar empleado..." 
-                     [(ngModel)]="filtroNombre">
-            </div>
-          </div>
-
           <!-- Filtro por estado -->
           <div class="col-md-2">
-            <select class="form-select form-select-sm" [(ngModel)]="filtroEstado">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroEstadoMisSolicitudes">
               <option value="">Todos los Estados</option>
               <option value="aprobado">✅ Aprobados</option>
               <option value="rechazado">❌ Rechazados</option>
-              <option value="pendiente" *ngIf="activeTab === 'mis-solicitudes'">⏳ Pendientes</option>
+              <option value="pendiente">⏳ Pendientes</option>
             </select>
           </div>
 
@@ -51,14 +38,14 @@
             <div class="input-group input-group-sm">
               <span class="input-group-text">Desde</span>
               <input type="date" class="form-control" 
-                     [(ngModel)]="filtroFechaInicio" 
+                     [(ngModel)]="filtroFechaInicioMisSolicitudes" 
                      (change)="validarFechasFiltro()">
             </div>
             <div class="input-group input-group-sm">
               <span class="input-group-text">Hasta</span>
               <input type="date" class="form-control" 
-                     [(ngModel)]="filtroFechaFin" 
-                     [min]="filtroFechaInicio">
+                     [(ngModel)]="filtroFechaFinMisSolicitudes" 
+                     [min]="filtroFechaInicioMisSolicitudes">
             </div>
           </div>
 
@@ -71,8 +58,165 @@
             </button>
           </div>
 
-          <!-- Botones de Exportación (VISIBLES) -->
-          <div class="col-auto ms-auto d-flex gap-1" *ngIf="activeTab !== 'crear'">
+          <!-- Botones de Exportación -->
+          <div class="col-auto ms-auto d-flex gap-1">
+            <button class="btn btn-success btn-sm" 
+                    (click)="exportarExcel()"
+                    [disabled]="exportando"
+                    title="Exportar a Excel">
+              <span *ngIf="exportando" class="spinner-border spinner-border-sm me-1"></span>
+              <i class="bi bi-file-earmark-excel" *ngIf="!exportando"></i>
+              <span class="d-none d-md-inline ms-1">Excel</span>
+            </button>
+            
+            <button class="btn btn-danger btn-sm" 
+                    (click)="exportarPDF()"
+                    [disabled]="exportando"
+                    title="Exportar a PDF">
+              <span *ngIf="exportando" class="spinner-border spinner-border-sm me-1"></span>
+              <i class="bi bi-file-earmark-pdf" *ngIf="!exportando"></i>
+              <span class="d-none d-md-inline ms-1">PDF</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros y Exportación para PENDIENTES (solo jefes) -->
+  <div *ngIf="activeTab === 'aprobar' && esJefe()" class="mb-4">
+    <div class="card shadow-sm border-0 bg-light">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-center">
+          <!-- Filtros -->
+          <div class="col-auto">
+            <span class="text-muted fw-bold small text-uppercase">
+              <i class="bi bi-funnel me-1"></i>Filtros:
+            </span>
+          </div>
+          
+          <!-- Filtro por tipo -->
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroTipoPendientes">
+              <option value="">Todos los Tipos</option>
+              <option value="vacaciones">🏖️ Vacaciones</option>
+              <option value="permiso">📋 Permiso Personal</option>
+              <option value="descanso">🏥 Descanso Médico</option>
+              <option value="compensacion">⏰ Compensación</option>
+              <option value="licencia">📄 Licencia</option>
+            </select>
+          </div>
+
+          <!-- Filtro por fechas -->
+          <div class="col-md-auto d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">Desde</span>
+              <input type="date" class="form-control" 
+                     [(ngModel)]="filtroFechaInicioPendientes" 
+                     (change)="validarFechasFiltro()">
+            </div>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">Hasta</span>
+              <input type="date" class="form-control" 
+                     [(ngModel)]="filtroFechaFinPendientes" 
+                     [min]="filtroFechaInicioPendientes">
+            </div>
+          </div>
+
+          <!-- Botón Limpiar -->
+          <div class="col-auto">
+            <button class="btn btn-sm btn-outline-secondary" 
+                    (click)="limpiarFiltros()" 
+                    title="Limpiar filtros">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
+            </button>
+          </div>
+
+          <!-- Botones de Exportación -->
+          <div class="col-auto ms-auto d-flex gap-1">
+            <button class="btn btn-success btn-sm" 
+                    (click)="exportarExcel()"
+                    [disabled]="exportando"
+                    title="Exportar a Excel">
+              <span *ngIf="exportando" class="spinner-border spinner-border-sm me-1"></span>
+              <i class="bi bi-file-earmark-excel" *ngIf="!exportando"></i>
+              <span class="d-none d-md-inline ms-1">Excel</span>
+            </button>
+            
+            <button class="btn btn-danger btn-sm" 
+                    (click)="exportarPDF()"
+                    [disabled]="exportando"
+                    title="Exportar a PDF">
+              <span *ngIf="exportando" class="spinner-border spinner-border-sm me-1"></span>
+              <i class="bi bi-file-earmark-pdf" *ngIf="!exportando"></i>
+              <span class="d-none d-md-inline ms-1">PDF</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros y Exportación para HISTORIAL (solo jefes) -->
+  <div *ngIf="activeTab === 'historial' && esJefe()" class="mb-4">
+    <div class="card shadow-sm border-0 bg-light">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-center">
+          <!-- Filtros -->
+          <div class="col-auto">
+            <span class="text-muted fw-bold small text-uppercase">
+              <i class="bi bi-funnel me-1"></i>Filtros:
+            </span>
+          </div>
+          
+          <!-- Filtro por nombre -->
+          <div class="col-md-3">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+              </span>
+              <input type="text" class="form-control border-start-0" 
+                     placeholder="Buscar empleado..." 
+                     [(ngModel)]="filtroNombreHistorial">
+            </div>
+          </div>
+
+          <!-- Filtro por estado -->
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroEstadoHistorial">
+              <option value="">Todos los Estados</option>
+              <option value="aprobado">✅ Aprobados</option>
+              <option value="rechazado">❌ Rechazados</option>
+            </select>
+          </div>
+
+          <!-- Filtro por fechas -->
+          <div class="col-md-auto d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">Desde</span>
+              <input type="date" class="form-control" 
+                     [(ngModel)]="filtroFechaInicioHistorial" 
+                     (change)="validarFechasFiltro()">
+            </div>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">Hasta</span>
+              <input type="date" class="form-control" 
+                     [(ngModel)]="filtroFechaFinHistorial" 
+                     [min]="filtroFechaInicioHistorial">
+            </div>
+          </div>
+
+          <!-- Botón Limpiar -->
+          <div class="col-auto">
+            <button class="btn btn-sm btn-outline-secondary" 
+                    (click)="limpiarFiltros()" 
+                    title="Limpiar filtros">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
+            </button>
+          </div>
+
+          <!-- Botones de Exportación -->
+          <div class="col-auto ms-auto d-flex gap-1">
             <button class="btn btn-success btn-sm" 
                     (click)="exportarExcel()"
                     [disabled]="exportando"
@@ -109,10 +253,11 @@
       </a>
     </li>
     
-    <!-- Tab: Crear (activa cuando se está creando) -->
+    <!-- Tab: Crear (activa cuando se está creando o editando) -->
     <li class="nav-item" *ngIf="activeTab === 'crear'">
       <a class="nav-link active" href="javascript:void(0)">
-         <i class="bi bi-pencil-square me-1"></i>Registrando...
+         <i class="bi" [class.bi-pencil-square]="!modoEdicion" [class.bi-pencil]="modoEdicion" class="me-1"></i>
+         {{ modoEdicion ? 'Editando...' : 'Registrando...' }}
       </a>
     </li>
 
@@ -152,17 +297,18 @@
               <th>Motivo</th>
               <th>Estado</th>
               <th>Autorizado Por</th>
+              <th class="text-end pe-4">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let sol of misSolicitudesFiltradas">
               <td class="ps-4 fw-bold text-primary">{{ sol.tipo | titlecase }}</td>
               <td class="text-muted small">
-                {{ sol.fechaSolicitud ? (sol.fechaSolicitud | date:'dd/MM/yyyy HH:mm') : 'N/A' }}
+                {{ sol.fechaSolicitud ? formatFechaHora(sol.fechaSolicitud) : 'N/A' }}
               </td>
               <td>
                 <span class="badge bg-light text-dark border">
-                  {{ sol.fechaInicio | date:'dd/MM' }} ➔ {{ sol.fechaFin | date:'dd/MM/yyyy' }}
+                  {{ formatFecha(sol.fechaInicio) }} ➔ {{ formatFecha(sol.fechaFin) }}
                 </span>
               </td>
               <td class="text-truncate" style="max-width: 200px;" title="{{sol.motivo}}">
@@ -182,9 +328,18 @@
                   -- Pendiente --
                 </span>
               </td>
+              <td class="text-end pe-4">
+                <!-- Botón Editar solo si está pendiente -->
+                <button class="btn btn-sm btn-outline-primary" 
+                        (click)="cargarSolicitudParaEditar(sol)" 
+                        *ngIf="sol.estado === 'pendiente'"
+                        title="Editar solicitud">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              </td>
             </tr>
             <tr *ngIf="misSolicitudesFiltradas.length === 0">
-              <td colspan="6" class="text-center py-5 text-muted">
+              <td colspan="7" class="text-center py-5 text-muted">
                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                 No se encontraron registros.
               </td>
@@ -201,13 +356,14 @@
     </div>
   </div>
 
-  <!-- Contenido de Pestaña: Crear Solicitud -->
+  <!-- Contenido de Pestaña: Crear/Editar Solicitud -->
   <div *ngIf="activeTab === 'crear'" class="card shadow-sm border-top-0 rounded-bottom">
     <div class="card-body p-4">
       <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
           <h4 class="mb-4 text-center text-primary">
-            <i class="bi bi-plus-circle me-2"></i>Registrar Nueva Solicitud
+            <i class="bi me-2" [class.bi-plus-circle]="!modoEdicion" [class.bi-pencil-square]="modoEdicion"></i>
+            {{ modoEdicion ? 'Editar Solicitud' : 'Registrar Nueva Solicitud' }}
           </h4>
           
           <!-- Mensaje de éxito -->
@@ -233,7 +389,7 @@
             <ul class="mb-3">
               <li *ngFor="let conflicto of conflictosDetectados">
                 <strong>{{ conflicto.tipo | titlecase }}</strong>: 
-                {{ conflicto.fechaInicio | date:'dd/MM/yyyy' }} al {{ conflicto.fechaFin | date:'dd/MM/yyyy' }} 
+                {{ formatFecha(conflicto.fechaInicio) }} al {{ formatFecha(conflicto.fechaFin) }} 
                 (Estado: {{ conflicto.estado | titlecase }})
               </li>
             </ul>
@@ -252,7 +408,8 @@
             </div>
           </div>
           
-          <form (ngSubmit)="crearSolicitud()">
+          <!-- Formulario para Crear -->
+          <form *ngIf="!modoEdicion" (ngSubmit)="crearSolicitud()">
             <!-- Tipo de Solicitud -->
             <div class="mb-3">
               <label class="form-label fw-bold">Tipo de Solicitud</label>
@@ -301,13 +458,84 @@
             <!-- Botones -->
             <div class="d-grid gap-2 d-md-flex justify-content-md-end border-top pt-3">
               <button type="button" class="btn btn-outline-secondary me-md-2" 
-                      (click)="limpiarFormulario(); activeTab = 'mis-solicitudes'">
+                      (click)="cancelarCreacion()">
                 <i class="bi bi-arrow-left me-1"></i>Cancelar
               </button>
               <button type="submit" class="btn btn-primary px-4" [disabled]="isLoading">
                 <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                 <i class="bi bi-send me-2" *ngIf="!isLoading"></i>
                 {{ isLoading ? 'Enviando...' : 'Enviar Solicitud' }}
+              </button>
+            </div>
+          </form>
+
+          <!-- Formulario para Editar -->
+          <form *ngIf="modoEdicion" (ngSubmit)="guardarEdicion()">
+            <!-- Tipo de Solicitud -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Tipo de Solicitud</label>
+              <select class="form-select" [(ngModel)]="editandoSolicitud.tipo" name="tipo" required>
+                <option value="vacaciones">🏖️ Vacaciones</option>
+                <option value="permiso">📋 Permiso Personal</option>
+                <option value="descanso">🏥 Descanso Médico</option>
+                <option value="compensacion">⏰ Compensación de Horas</option>
+                <option value="licencia">📄 Licencia Especial</option>
+              </select>
+            </div>
+
+            <!-- Estado (solo para edición de supervisores) -->
+            <div class="mb-3" *ngIf="esJefe()">
+              <label class="form-label fw-bold">Estado</label>
+              <select class="form-select" [(ngModel)]="editandoSolicitud.estado" name="estado">
+                <option value="pendiente">⏳ Pendiente</option>
+                <option value="aprobado">✅ Aprobado</option>
+                <option value="rechazado">❌ Rechazado</option>
+              </select>
+            </div>
+
+            <!-- Fechas -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold">Fecha Inicio</label>
+                <input type="date" class="form-control" 
+                       [(ngModel)]="editandoSolicitud.fechaInicio" 
+                       name="fechaInicio" 
+                       required
+                       [min]="getFechaActual()">
+                <small class="form-text text-muted">Primer día de la solicitud</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold">Fecha Fin</label>
+                <input type="date" class="form-control" 
+                       [(ngModel)]="editandoSolicitud.fechaFin" 
+                       name="fechaFin" 
+                       required
+                       [min]="editandoSolicitud.fechaInicio || getFechaActual()">
+                <small class="form-text text-muted">Último día de la solicitud</small>
+              </div>
+            </div>
+
+            <!-- Motivo -->
+            <div class="mb-4">
+              <label class="form-label fw-bold">Motivo</label>
+              <textarea class="form-control" rows="4" 
+                        [(ngModel)]="editandoSolicitud.motivo" 
+                        name="motivo" 
+                        placeholder="Explique detalladamente el motivo de su solicitud..."
+                        required></textarea>
+              <small class="form-text text-muted">Máximo 500 caracteres</small>
+            </div>
+
+            <!-- Botones -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end border-top pt-3">
+              <button type="button" class="btn btn-outline-secondary me-md-2" 
+                      (click)="cancelarEdicion()">
+                <i class="bi bi-arrow-left me-1"></i>Cancelar Edición
+              </button>
+              <button type="submit" class="btn btn-primary px-4" [disabled]="isLoading">
+                <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                <i class="bi bi-save me-2" *ngIf="!isLoading"></i>
+                {{ isLoading ? 'Guardando...' : 'Guardar Cambios' }}
               </button>
             </div>
           </form>
@@ -330,37 +558,45 @@
           <thead class="bg-light text-secondary">
             <tr>
               <th class="ps-4">Empleado</th>
-              <th>Solicitud</th>
+              <th>Tipo</th>
               <th>Fechas</th>
               <th>Motivo</th>
               <th class="text-end pe-4">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let sol of solicitudesPendientes">
+            <tr *ngFor="let sol of pendientesFiltradas">
               <td class="ps-4">
                 <div class="fw-bold">{{ sol.empleadoNombre }}</div>
                 <small class="text-muted badge bg-white text-dark border">
-                  {{ sol.fechaSolicitud ? (sol.fechaSolicitud | date:'shortDate') : 'N/A' }}
+                  {{ sol.fechaSolicitud ? formatFechaHora(sol.fechaSolicitud) : 'N/A' }}
                 </small>
               </td>
               <td>
                 <span class="badge bg-secondary">{{ (sol.tipo || '').toUpperCase() }}</span>
               </td>
               <td>
-                <div class="fw-bold">{{ sol.fechaInicio | date:'dd/MM' }}</div>
-                <small class="text-muted">al {{ sol.fechaFin | date:'dd/MM/yyyy' }}</small>
+                <div class="fw-bold">{{ formatFecha(sol.fechaInicio) }}</div>
+                <small class="text-muted">al {{ formatFecha(sol.fechaFin) }}</small>
               </td>
               <td class="text-truncate" style="max-width: 250px;" title="{{sol.motivo}}">
                 {{ sol.motivo || 'Sin motivo especificado' }}
               </td>
               <td class="text-end pe-4">
                 <div class="btn-group btn-group-sm">
+                  <!-- Botón Editar -->
+                  <button class="btn btn-outline-primary" 
+                          (click)="cargarSolicitudParaEditar(sol)" 
+                          title="Editar Solicitud">
+                    <i class="bi bi-pencil me-1"></i> Editar
+                  </button>
+                  <!-- Botón Aprobar -->
                   <button class="btn btn-success" 
                           (click)="procesar(sol.id!, 'aprobado')" 
                           title="Aprobar">
                     <i class="bi bi-check-lg me-1"></i> Aprobar
                   </button>
+                  <!-- Botón Rechazar -->
                   <button class="btn btn-outline-danger" 
                           (click)="procesar(sol.id!, 'rechazado')" 
                           title="Rechazar">
@@ -369,7 +605,7 @@
                 </div>
               </td>
             </tr>
-            <tr *ngIf="solicitudesPendientes.length === 0">
+            <tr *ngIf="pendientesFiltradas.length === 0">
               <td colspan="5" class="text-center py-5">
                 <div class="text-muted">
                   <i class="bi bi-check2-circle fs-1 d-block mb-2 text-success"></i>
@@ -384,7 +620,7 @@
       <!-- Contador de resultados -->
       <div class="card-footer bg-transparent border-top-0 py-2">
         <small class="text-muted">
-          Total de solicitudes pendientes: {{ solicitudesPendientes.length }}
+          Mostrando {{ pendientesFiltradas.length }} de {{ solicitudesPendientes.length }} solicitudes pendientes
         </small>
       </div>
     </div>
@@ -418,8 +654,8 @@
                 <span class="badge bg-info text-white">{{ (sol.tipo || '').toUpperCase() }}</span>
               </td>
               <td>
-                <div class="fw-bold">{{ sol.fechaInicio | date:'dd/MM/yyyy' }}</div>
-                <small class="text-muted">al {{ sol.fechaFin | date:'dd/MM/yyyy' }}</small>
+                <div class="fw-bold">{{ formatFecha(sol.fechaInicio) }}</div>
+                <small class="text-muted">al {{ formatFecha(sol.fechaFin) }}</small>
               </td>
               <td>
                 <span class="badge rounded-pill" [ngClass]="getEstadoClass(sol.estado || '')">
@@ -433,7 +669,7 @@
                 </div>
               </td>
               <td class="text-muted small">
-                {{ sol.fechaAprobacion ? (sol.fechaAprobacion | date:'short') : 'N/A' }}
+                {{ sol.fechaAprobacion ? formatFechaHora(sol.fechaAprobacion) : 'N/A' }}
               </td>
             </tr>
             <tr *ngIf="historialGlobalFiltrado.length === 0">

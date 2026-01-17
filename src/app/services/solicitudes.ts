@@ -1,4 +1,3 @@
-// services/solicitudes.service.ts - SOLO MEJORAS EN MANEJO DE ERRORES
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
@@ -16,7 +15,6 @@ export class SolicitudesService {
   crearSolicitud(solicitud: any): Observable<SolicitudResponse> {
     return this.http.post<SolicitudResponse>(`${this.apiUrl}/crear`, solicitud).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Manejar error 409 (Conflict) específicamente
         if (error.status === 409) {
           return throwError(() => error.error.error || 'Conflicto de fechas detectado');
         }
@@ -35,7 +33,7 @@ export class SolicitudesService {
     return this.http.get<SolicitudResponse[]>(`${this.apiUrl}/pendientes`);
   }
 
-  // Obtener historial completo (Para Admin)
+  // Obtener todas las solicitudes
   getTodas(): Observable<SolicitudResponse[]> {
     return this.http.get<SolicitudResponse[]>(`${this.apiUrl}/todas`);
   }
@@ -43,6 +41,11 @@ export class SolicitudesService {
   // Obtener historial (excluyendo pendientes)
   getHistorial(): Observable<SolicitudResponse[]> {
     return this.http.get<SolicitudResponse[]>(`${this.apiUrl}/historial`);
+  }
+
+  // Obtener una solicitud por ID
+  getSolicitudById(id: number): Observable<SolicitudResponse> {
+    return this.http.get<SolicitudResponse>(`${this.apiUrl}/${id}`);
   }
 
   // Aprobar o Rechazar solicitud
