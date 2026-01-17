@@ -45,7 +45,8 @@ export class SolicitudesComponent implements OnInit {
   };
 
   tieneConflictos = false;
-  conflictosDetectados: any[] = [];
+  conflictosPropiosDetectados: any[] = [];
+  conflictosGlobalesDetectados: any[] = [];
   mostrarConfirmacionConflictos = false;
 
   solicitudEditando: SolicitudResponse | null = null;
@@ -126,15 +127,16 @@ export class SolicitudesComponent implements OnInit {
 
     this.isLoading = true;
     
-    this.solicitudesService.verificarConflictos(
+    this.solicitudesService.verificarConflictosCompletos(
       this.currentUser.id,
       this.nuevaSolicitud.fechaInicio,
       this.nuevaSolicitud.fechaFin
     ).subscribe({
       next: (response) => {
-        if (response.tieneConflictos) {
+        if (response.tieneConflictosTotales) {
           this.tieneConflictos = true;
-          this.conflictosDetectados = response.conflictos || [];
+          this.conflictosPropiosDetectados = response.conflictosPropios || [];
+          this.conflictosGlobalesDetectados = response.conflictosGlobales || [];
           this.mostrarConfirmacionConflictos = true;
           this.isLoading = false;
         } else {
@@ -156,7 +158,8 @@ export class SolicitudesComponent implements OnInit {
   cancelarSolicitudConConflictos() {
     this.mostrarConfirmacionConflictos = false;
     this.tieneConflictos = false;
-    this.conflictosDetectados = [];
+    this.conflictosPropiosDetectados = [];
+    this.conflictosGlobalesDetectados = [];
   }
 
   private enviarSolicitud() {
@@ -172,7 +175,8 @@ export class SolicitudesComponent implements OnInit {
         this.limpiarFormulario();
         if (this.activeTab === 'crear') this.activeTab = 'mis-solicitudes';
         this.tieneConflictos = false;
-        this.conflictosDetectados = [];
+        this.conflictosPropiosDetectados = [];
+        this.conflictosGlobalesDetectados = [];
         setTimeout(() => this.mensaje = '', 3000);
         this.isLoading = false;
       },
@@ -215,15 +219,27 @@ export class SolicitudesComponent implements OnInit {
 
     this.isLoading = true;
     
-    this.solicitudesService.verificarConflictos(
+    this.solicitudesService.verificarConflictosCompletos(
       this.currentUser.id,
       this.editandoSolicitud.fechaInicio,
       this.editandoSolicitud.fechaFin
     ).subscribe({
       next: (response) => {
-        const conflictosReales = response.conflictos?.filter((c: any) => c.id !== this.editandoSolicitud.id) || [];
-        if (conflictosReales.length > 0) {
-          if (!confirm('Se detectaron conflictos con otras solicitudes. ¿Deseas continuar?')) {
+        const conflictosPropios = response.conflictosPropios.filter((c: any) => c.id !== this.editandoSolicitud.id);
+        const conflictosGlobales = response.conflictosGlobales;
+        const conflictosTotales = conflictosPropios.length + conflictosGlobales.length;
+        
+        if (conflictosTotales > 0) {
+          let mensaje = 'Se detectaron conflictos con otras solicitudes:\n';
+          if (conflictosPropios.length > 0) {
+            mensaje += `• ${conflictosPropios.length} conflicto(s) con tus propias solicitudes\n`;
+          }
+          if (conflictosGlobales.length > 0) {
+            mensaje += `• ${conflictosGlobales.length} conflicto(s) con solicitudes de otros empleados\n`;
+          }
+          mensaje += '\n¿Deseas continuar?';
+          
+          if (!confirm(mensaje)) {
             this.isLoading = false;
             return;
           }
@@ -273,7 +289,8 @@ export class SolicitudesComponent implements OnInit {
       estado: 'pendiente'
     };
     this.tieneConflictos = false;
-    this.conflictosDetectados = [];
+    this.conflictosPropiosDetectados = [];
+    this.conflictosGlobalesDetectados = [];
     this.mostrarConfirmacionConflictos = false;
     this.limpiarFormulario();
     this.activeTab = this.esJefe() ? 'aprobar' : 'mis-solicitudes';
@@ -579,7 +596,8 @@ export class SolicitudesComponent implements OnInit {
       motivo: ''
     };
     this.tieneConflictos = false;
-    this.conflictosDetectados = [];
+    this.conflictosPropiosDetectados = [];
+    this.conflictosGlobalesDetectados = [];
     this.mostrarConfirmacionConflictos = false;
   }
 

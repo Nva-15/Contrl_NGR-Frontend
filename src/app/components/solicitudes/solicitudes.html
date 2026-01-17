@@ -280,7 +280,7 @@
            (click)="activeTab = 'historial'" href="javascript:void(0)">
            <i class="bi bi-clock-history me-1"></i>Historial Global
         </a>
-      </li>
+    </li>
     </ng-container>
   </ul>
 
@@ -378,21 +378,44 @@
               ¡ADVERTENCIA: CONFLICTOS DETECTADOS!
             </h5>
             
-            <p>
-              Se han detectado <strong>{{ conflictosDetectados.length }} solicitud(es)</strong> existentes 
-              que coinciden con el período solicitado. Tu solicitud será evaluada cuidadosamente.
-            </p>
+            <!-- Conflictos propios -->
+            <div *ngIf="conflictosPropiosDetectados.length > 0" class="mb-3">
+              <p>
+                Se han detectado <strong>{{ conflictosPropiosDetectados.length }} solicitud(es) de tus propias solicitudes</strong> 
+                que coinciden con el período solicitado.
+              </p>
+              
+              <h6>Tus solicitudes existentes:</h6>
+              <ul class="mb-2">
+                <li *ngFor="let conflicto of conflictosPropiosDetectados">
+                  <strong>{{ conflicto.tipo | titlecase }}</strong>: 
+                  {{ formatFecha(conflicto.fechaInicio) }} al {{ formatFecha(conflicto.fechaFin) }} 
+                  (Estado: {{ conflicto.estado | titlecase }})
+                </li>
+              </ul>
+            </div>
             
-            <hr>
-            
-            <h6>Solicitudes existentes:</h6>
-            <ul class="mb-3">
-              <li *ngFor="let conflicto of conflictosDetectados">
-                <strong>{{ conflicto.tipo | titlecase }}</strong>: 
-                {{ formatFecha(conflicto.fechaInicio) }} al {{ formatFecha(conflicto.fechaFin) }} 
-                (Estado: {{ conflicto.estado | titlecase }})
-              </li>
-            </ul>
+            <!-- Conflictos con otros empleados -->
+            <div *ngIf="conflictosGlobalesDetectados.length > 0" class="mb-3">
+              <p>
+                También hay <strong>{{ conflictosGlobalesDetectados.length }} solicitud(es) de otros empleados</strong> 
+                en las mismas fechas.
+              </p>
+              
+              <h6>Solicitudes de otros empleados:</h6>
+              <ul class="mb-2">
+                <li *ngFor="let conflicto of conflictosGlobalesDetectados">
+                  <strong>{{ conflicto.empleadoNombre || 'Empleado' }}</strong>: 
+                  {{ conflicto.tipo | titlecase }} - 
+                  {{ formatFecha(conflicto.fechaInicio) }} al {{ formatFecha(conflicto.fechaFin) }}
+                  (Estado: {{ conflicto.estado | titlecase }})
+                </li>
+              </ul>
+              <p class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                El supervisor considerará la disponibilidad del equipo al revisar tu solicitud.
+              </p>
+            </div>
             
             <p class="mb-0">
               <strong>¿Deseas continuar con el envío de tu solicitud?</strong>
