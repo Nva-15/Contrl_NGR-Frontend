@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { Solicitud, SolicitudResponse } from '../interfaces/solicitud';
+import { SolicitudResponse } from '../interfaces/solicitud';
 
 @Injectable({
   providedIn: 'root'
@@ -11,8 +11,25 @@ export class SolicitudesService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8080/api/solicitudes';
 
-  crearSolicitud(solicitud: any): Observable<SolicitudResponse> {
-    return this.http.post<SolicitudResponse>(`${this.apiUrl}/crear`, solicitud).pipe(
+  // Método para obtener headers con token
+  private getHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token') || '';
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
+  crearSolicitud(solicitud: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/crear`, solicitud).pipe(
+      map((response: any) => {
+        if (response.solicitud) {
+          return {
+            ...response
+          };
+        }
+        return response;
+      }),
       catchError((error: HttpErrorResponse) => {
         return throwError(() => error.error?.error || 'Error al crear solicitud');
       })
@@ -47,11 +64,22 @@ export class SolicitudesService {
     return this.http.put<SolicitudResponse>(`${this.apiUrl}/gestionar/${id}`, payload);
   }
 
-  editarSolicitud(id: number, datos: any): Observable<SolicitudResponse> {
-    return this.http.put<SolicitudResponse>(`${this.apiUrl}/editar/${id}`, datos);
+  // Ahora el backend maneja el token en el header
+  editarSolicitud(id: number, datos: any): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.put<any>(`${this.apiUrl}/editar/${id}`, datos, { headers }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 403) {
+          return throwError(() => 'No tiene permisos para editar esta solicitud');
+        }
+        if (error.status === 401) {
+          return throwError(() => 'No autorizado. Por favor inicie sesión nuevamente');
+        }
+        return throwError(() => error.error?.error || 'Error al editar solicitud');
+      })
+    );
   }
 
-  // Verificar conflictos por rol
   verificarConflictosPorRol(empleadoId: number, rolEmpleado: string, fechaInicio: string, fechaFin: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/verificar-conflictos-por-rol`, {
       empleadoId,
@@ -77,13 +105,6 @@ export class SolicitudesService {
         return throwError(() => error.error?.error || 'Error al verificar conflictos');
       })
     );
-  }
-
-  verificarDisponibilidadEquipo(fechaInicio: string, fechaFin: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/verificar-disponibilidad-equipo`, {
-      fechaInicio,
-      fechaFin
-    });
   }
 
   exportarSolicitudes(tipo: string, empleadoId?: number, formato: string = 'json'): Observable<any> {

@@ -31,6 +31,17 @@
             </select>
           </div>
 
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroTipoMisSolicitudes">
+              <option value="">Todos los Tipos</option>
+              <option value="vacaciones">🏖️ Vacaciones</option>
+              <option value="permiso">📋 Permiso</option>
+              <option value="descanso">🏥 Descanso</option>
+              <option value="compensacion">⏰ Compensación</option>
+              <option value="licencia">📄 Licencia</option>
+            </select>
+          </div>
+
           <div class="col-md-auto d-flex align-items-center gap-2">
             <div class="input-group input-group-sm">
               <span class="input-group-text">Desde</span>
@@ -94,7 +105,20 @@
               <option value="">Todos los Roles</option>
               <option *ngIf="esAdmin()" value="supervisor">👔 Supervisores</option>
               <option *ngIf="esSupervisor() || esAdmin()" value="tecnico">👷 Técnicos</option>
+              <option *ngIf="esSupervisor() || esAdmin()" value="hd">🎧 HD</option>
+              <option *ngIf="esSupervisor() || esAdmin()" value="noc">🌐 NOC</option>
               <option *ngIf="esAdmin()" value="admin">👑 Administradores</option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroTipoPendientes">
+              <option value="">Todos los Tipos</option>
+              <option value="vacaciones">🏖️ Vacaciones</option>
+              <option value="permiso">📋 Permiso</option>
+              <option value="descanso">🏥 Descanso</option>
+              <option value="compensacion">⏰ Compensación</option>
+              <option value="licencia">📄 Licencia</option>
             </select>
           </div>
 
@@ -107,17 +131,6 @@
                      placeholder="Empleado..." 
                      [(ngModel)]="filtroEmpleadoPendientes">
             </div>
-          </div>
-
-          <div class="col-md-2">
-            <select class="form-select form-select-sm" [(ngModel)]="filtroTipoPendientes">
-              <option value="">Todos los Tipos</option>
-              <option value="vacaciones">🏖️ Vacaciones</option>
-              <option value="permiso">📋 Permiso Personal</option>
-              <option value="descanso">🏥 Descanso Médico</option>
-              <option value="compensacion">⏰ Compensación</option>
-              <option value="licencia">📄 Licencia</option>
-            </select>
           </div>
 
           <div class="col-md-auto d-flex align-items-center gap-2">
@@ -169,6 +182,8 @@
             Mostrando solicitudes de 
             <span *ngIf="filtroRolPendientes === 'supervisor'">supervisores</span>
             <span *ngIf="filtroRolPendientes === 'tecnico'">técnicos</span>
+            <span *ngIf="filtroRolPendientes === 'hd'">HD</span>
+            <span *ngIf="filtroRolPendientes === 'noc'">NOC</span>
             <span *ngIf="filtroRolPendientes === 'admin'">administradores</span>
             <span *ngIf="filtroEmpleadoPendientes"> que coinciden con "{{filtroEmpleadoPendientes}}"</span>
           </small>
@@ -193,7 +208,29 @@
               <option value="">Todos los Roles</option>
               <option *ngIf="esAdmin()" value="supervisor">👔 Supervisores</option>
               <option *ngIf="esSupervisor() || esAdmin()" value="tecnico">👷 Técnicos</option>
+              <option *ngIf="esSupervisor() || esAdmin()" value="hd">🎧 HD</option>
+              <option *ngIf="esSupervisor() || esAdmin()" value="noc">🌐 NOC</option>
               <option *ngIf="esAdmin()" value="admin">👑 Administradores</option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroTipoHistorial">
+              <option value="">Todos los Tipos</option>
+              <option value="vacaciones">🏖️ Vacaciones</option>
+              <option value="permiso">📋 Permiso</option>
+              <option value="descanso">🏥 Descanso</option>
+              <option value="compensacion">⏰ Compensación</option>
+              <option value="licencia">📄 Licencia</option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroEstadoHistorial">
+              <option value="">Todos los Estados</option>
+              <option value="aprobado">✅ Aprobados</option>
+              <option value="rechazado">❌ Rechazados</option>
+              <option value="cancelada">🚫 Canceladas</option>
             </select>
           </div>
 
@@ -206,25 +243,6 @@
                      placeholder="Empleado..." 
                      [(ngModel)]="filtroEmpleadoHistorial">
             </div>
-          </div>
-
-          <div class="col-md-2">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-white border-end-0">
-                <i class="bi bi-search text-muted"></i>
-              </span>
-              <input type="text" class="form-control border-start-0" 
-                     placeholder="Buscar..." 
-                     [(ngModel)]="filtroNombreHistorial">
-            </div>
-          </div>
-
-          <div class="col-md-2">
-            <select class="form-select form-select-sm" [(ngModel)]="filtroEstadoHistorial">
-              <option value="">Todos los Estados</option>
-              <option value="aprobado">✅ Aprobados</option>
-              <option value="rechazado">❌ Rechazados</option>
-            </select>
           </div>
 
           <div class="col-md-auto d-flex align-items-center gap-2">
@@ -276,8 +294,10 @@
             Mostrando historial de 
             <span *ngIf="filtroRolHistorial === 'supervisor'">supervisores</span>
             <span *ngIf="filtroRolHistorial === 'tecnico'">técnicos</span>
+            <span *ngIf="filtroRolHistorial === 'hd'">HD</span>
+            <span *ngIf="filtroRolHistorial === 'noc'">NOC</span>
             <span *ngIf="filtroRolHistorial === 'admin'">administradores</span>
-            <span *ngIf="filtroNombreHistorial"> que coinciden con "{{filtroNombreHistorial}}"</span>
+            <span *ngIf="filtroEmpleadoHistorial"> que coinciden con "{{filtroEmpleadoHistorial}}"</span>
           </small>
         </div>
       </div>
@@ -370,7 +390,7 @@
               <td class="text-end pe-4">
                 <button class="btn btn-sm btn-outline-primary" 
                         (click)="cargarSolicitudParaEditar(sol)" 
-                        *ngIf="sol.estado === 'pendiente'"
+                        *ngIf="puedeEditarSolicitud(sol)"
                         title="Editar solicitud">
                   <i class="bi bi-pencil"></i>
                 </button>
@@ -492,8 +512,7 @@
                 <input type="date" class="form-control" 
                        [(ngModel)]="editandoSolicitud.fechaInicio" 
                        name="fechaInicio" 
-                       required
-                       [min]="getFechaActual()">
+                       required>
                 <small class="form-text text-muted">Primer día</small>
               </div>
               <div class="col-md-6">
@@ -502,7 +521,7 @@
                        [(ngModel)]="editandoSolicitud.fechaFin" 
                        name="fechaFin" 
                        required
-                       [min]="editandoSolicitud.fechaInicio || getFechaActual()">
+                       [min]="editandoSolicitud.fechaInicio">
                 <small class="form-text text-muted">Último día</small>
               </div>
             </div>
@@ -582,6 +601,7 @@
                 <div class="btn-group btn-group-sm">
                   <button class="btn btn-outline-primary" 
                           (click)="cargarSolicitudParaEditar(sol)" 
+                          *ngIf="puedeEditarSolicitud(sol)"
                           title="Editar">
                     <i class="bi bi-pencil me-1"></i> Editar
                   </button>
@@ -680,11 +700,10 @@
               <td class="text-center">
                 <button class="btn btn-sm btn-outline-primary" 
                         (click)="cargarSolicitudParaEditar(sol)" 
-                        *ngIf="(esAdmin() || esSupervisor()) && (sol.estado === 'pendiente' || sol.estado === 'aprobado')"
+                        *ngIf="puedeEditarSolicitud(sol)"
                         title="Editar">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <span *ngIf="sol.estado === 'rechazado'" class="text-muted small">No editable</span>
               </td>
             </tr>
             <tr *ngIf="historialGlobalFiltrado.length === 0">

@@ -29,23 +29,24 @@ export class SolicitudesComponent implements OnInit {
   
   // Filtros para MIS SOLICITUDES
   filtroEstadoMisSolicitudes = '';
+  filtroTipoMisSolicitudes = '';
   filtroFechaInicioMisSolicitudes = '';
   filtroFechaFinMisSolicitudes = '';
   
   // Filtros para PENDIENTES (solo jefes/supervisores)
   filtroTipoPendientes = '';
-  filtroFechaInicioPendientes = '';
-  filtroFechaFinPendientes = '';
   filtroRolPendientes = '';
   filtroEmpleadoPendientes = '';
+  filtroFechaInicioPendientes = '';
+  filtroFechaFinPendientes = '';
   
   // Filtros para HISTORIAL GLOBAL
-  filtroNombreHistorial = '';
+  filtroRolHistorial = '';
+  filtroTipoHistorial = '';
   filtroEstadoHistorial = '';
+  filtroEmpleadoHistorial = '';
   filtroFechaInicioHistorial = '';
   filtroFechaFinHistorial = '';
-  filtroRolHistorial = '';
-  filtroEmpleadoHistorial = '';
   
   nuevaSolicitud = {
     tipo: 'vacaciones',
@@ -104,6 +105,33 @@ export class SolicitudesComponent implements OnInit {
     return this.esAdmin() || this.esSupervisor();
   }
 
+  puedeEditarSolicitud(solicitud: SolicitudResponse): boolean {
+    if (!solicitud.estado || !this.currentUser) return false;
+    
+    const esMiSolicitud = solicitud.empleadoId === this.currentUser.id;
+    const solicitudRol = this.obtenerRolEmpleado(solicitud.empleadoId);
+    
+    if (solicitud.estado === 'pendiente') {
+      return esMiSolicitud || this.esJefe();
+    }
+    
+    if (['aprobada', 'rechazada', 'cancelada'].includes(solicitud.estado)) {
+      if (esMiSolicitud) return false;
+      
+      if (['tecnico', 'hd', 'noc'].includes(solicitudRol)) {
+        return this.esJefe();
+      }
+      
+      if (solicitudRol === 'supervisor') {
+        return this.esAdmin();
+      }
+      
+      return this.esAdmin();
+    }
+    
+    return false;
+  }
+
   cargarDatos() {
     this.cargarMisSolicitudes();
     if (this.esJefe()) {
@@ -116,12 +144,11 @@ export class SolicitudesComponent implements OnInit {
     this.empleadosService.getEmpleados().subscribe({
       next: (data) => {
         this.todosEmpleados = data;
-        // Configurar filtro por defecto según el rol
         if (this.esAdmin()) {
-          this.filtroRolPendientes = 'supervisor'; // Admin ve supervisores por defecto
+          this.filtroRolPendientes = 'supervisor';
           this.filtroRolHistorial = 'supervisor';
         } else if (this.esSupervisor()) {
-          this.filtroRolPendientes = 'tecnico'; // Supervisores ven técnicos por defecto
+          this.filtroRolPendientes = 'tecnico';
           this.filtroRolHistorial = 'tecnico';
         }
       }
@@ -165,10 +192,9 @@ export class SolicitudesComponent implements OnInit {
       alert('La fecha de fin no puede ser anterior a la fecha de inicio');
       return;
     }
-
+  
     this.isLoading = true;
     
-    // VERIFICAR CONFLICTOS POR ROL (NUEVA IMPLEMENTACIÓN)
     this.solicitudesService.verificarConflictosPorRol(
       this.currentUser.id,
       this.currentUser.rol,
@@ -177,41 +203,39 @@ export class SolicitudesComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         if (response.tieneConflictos) {
-          // HAY CONFLICTO: Mostrar alerta informativa
-          this.tieneConflictos = true;
-          this.mensajeConflictos = response.mensaje;
-          this.conflictosDetectados = response.conflictos || [];
-          
-          // Mostrar alerta informativa (no bloqueante)
-          alert(this.mensajeConflictos);
+          alert(response.mensaje);
         }
-        // EN TODOS LOS CASOS (con o sin conflicto) se envía la solicitud
         this.enviarSolicitud();
       },
       error: (err) => {
         console.error('Error verificando conflictos:', err);
-        // Si hay error en la verificación, igual se envía la solicitud
         this.enviarSolicitud();
       }
     });
   }
-
+  
   private enviarSolicitud() {
     const payload = {
       empleadoId: this.currentUser.id,
       ...this.nuevaSolicitud
     };
-
+  
     this.solicitudesService.crearSolicitud(payload).subscribe({
       next: (response) => {
-        this.mensaje = 'Solicitud enviada correctamente';
+        if (response.tieneNotaConflicto) {
+          this.mensaje = '✅ Solicitud enviada. Se detectaron conflictos de fechas, se ha agregado una nota informativa en el motivo.';
+          alert('✅ Solicitud enviada. Se detectaron conflictos de fechas, se ha agregado una nota informativa en el motivo.');
+        } else {
+          this.mensaje = '✅ Solicitud enviada correctamente.';
+        }
+        
         this.cargarDatos();
         this.limpiarFormulario();
         if (this.activeTab === 'crear') this.activeTab = 'mis-solicitudes';
         this.tieneConflictos = false;
         this.mensajeConflictos = '';
         this.conflictosDetectados = [];
-        setTimeout(() => this.mensaje = '', 3000);
+        setTimeout(() => this.mensaje = '', 5000);
         this.isLoading = false;
       },
       error: (err) => {
@@ -227,16 +251,29 @@ export class SolicitudesComponent implements OnInit {
   }
 
   cargarSolicitudParaEditar(solicitud: SolicitudResponse) {
+    if (!this.puedeEditarSolicitud(solicitud)) {
+      alert('No tiene permisos para editar esta solicitud');
+      return;
+    }
+    
     this.modoEdicion = true;
     this.solicitudEditando = solicitud;
+    
+    const fechaInicioRaw = solicitud.fechaInicio || '';
+    const fechaFinRaw = solicitud.fechaFin || '';
+    
+    const fechaInicio = fechaInicioRaw.split('T')[0];
+    const fechaFin = fechaFinRaw.split('T')[0];
+    
     this.editandoSolicitud = {
       id: solicitud.id || 0,
       tipo: solicitud.tipo || 'vacaciones',
-      fechaInicio: solicitud.fechaInicio || '',
-      fechaFin: solicitud.fechaFin || '',
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
       motivo: solicitud.motivo || '',
       estado: solicitud.estado || 'pendiente'
     };
+    
     this.activeTab = 'crear';
   }
 
@@ -253,7 +290,6 @@ export class SolicitudesComponent implements OnInit {
 
     this.isLoading = true;
     
-    // Verificar conflictos por rol antes de editar
     this.solicitudesService.verificarConflictosPorRol(
       this.currentUser.id,
       this.currentUser.rol,
@@ -262,15 +298,11 @@ export class SolicitudesComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         if (response.tieneConflictos) {
-          // Filtrar para excluir la solicitud actual de los conflictos
           const conflictosFiltrados = response.conflictos.filter((c: any) => c.id !== this.editandoSolicitud.id);
-          
           if (conflictosFiltrados.length > 0) {
-            // Mostrar alerta informativa
             alert(response.mensaje);
           }
         }
-        // Siempro proceder con la actualización
         this.actualizarSolicitud();
       },
       error: () => this.actualizarSolicitud()
@@ -284,15 +316,15 @@ export class SolicitudesComponent implements OnInit {
       fechaFin: this.editandoSolicitud.fechaFin,
       motivo: this.editandoSolicitud.motivo
     };
-
+  
+    // Si es jefe y NO es su solicitud, incluir el estado
     if (this.esJefe() && this.editandoSolicitud.id) {
-      // Solo jefes pueden cambiar el estado de solicitudes que no son suyas
       const esMiSolicitud = this.misSolicitudes.some(s => s.id === this.editandoSolicitud.id);
       if (!esMiSolicitud) {
         payload.estado = this.editandoSolicitud.estado;
       }
     }
-
+  
     this.solicitudesService.editarSolicitud(this.editandoSolicitud.id, payload).subscribe({
       next: (response) => {
         this.mensaje = 'Solicitud actualizada correctamente';
@@ -330,21 +362,28 @@ export class SolicitudesComponent implements OnInit {
   get misSolicitudesFiltradas() {
     return this.misSolicitudes.filter(sol => {
       let matchEstado = true;
+      let matchTipo = true;
       let matchFecha = true;
 
       if (this.filtroEstadoMisSolicitudes) {
         matchEstado = sol.estado === this.filtroEstadoMisSolicitudes;
       }
 
+      if (this.filtroTipoMisSolicitudes) {
+        matchTipo = sol.tipo === this.filtroTipoMisSolicitudes;
+      }
+
       if (this.filtroFechaInicioMisSolicitudes && sol.fechaInicio) {
-        matchFecha = sol.fechaInicio >= this.filtroFechaInicioMisSolicitudes;
+        const fechaSol = sol.fechaInicio.split('T')[0];
+        matchFecha = fechaSol >= this.filtroFechaInicioMisSolicitudes;
       }
 
       if (this.filtroFechaFinMisSolicitudes && sol.fechaInicio) {
-        matchFecha = matchFecha && sol.fechaInicio <= this.filtroFechaFinMisSolicitudes;
+        const fechaSol = sol.fechaInicio.split('T')[0];
+        matchFecha = matchFecha && fechaSol <= this.filtroFechaFinMisSolicitudes;
       }
 
-      return matchEstado && matchFecha;
+      return matchEstado && matchTipo && matchFecha;
     });
   }
 
@@ -353,23 +392,14 @@ export class SolicitudesComponent implements OnInit {
     
     return this.solicitudesPendientes.filter(sol => {
       let matchTipo = true;
-      let matchFecha = true;
       let matchRol = true;
       let matchEmpleado = true;
+      let matchFecha = true;
 
       if (this.filtroTipoPendientes) {
         matchTipo = sol.tipo === this.filtroTipoPendientes;
       }
 
-      if (this.filtroFechaInicioPendientes && sol.fechaInicio) {
-        matchFecha = sol.fechaInicio >= this.filtroFechaInicioPendientes;
-      }
-
-      if (this.filtroFechaFinPendientes && sol.fechaInicio) {
-        matchFecha = matchFecha && sol.fechaInicio <= this.filtroFechaFinPendientes;
-      }
-
-      // Filtro por rol
       if (this.filtroRolPendientes) {
         const empleado = this.todosEmpleados.find(e => e.id === sol.empleadoId);
         if (empleado) {
@@ -377,12 +407,21 @@ export class SolicitudesComponent implements OnInit {
         }
       }
 
-      // Filtro por empleado específico
       if (this.filtroEmpleadoPendientes) {
         matchEmpleado = sol.empleadoNombre.toLowerCase().includes(this.filtroEmpleadoPendientes.toLowerCase());
       }
 
-      return matchTipo && matchFecha && matchRol && matchEmpleado;
+      if (this.filtroFechaInicioPendientes && sol.fechaInicio) {
+        const fechaSol = sol.fechaInicio.split('T')[0];
+        matchFecha = fechaSol >= this.filtroFechaInicioPendientes;
+      }
+
+      if (this.filtroFechaFinPendientes && sol.fechaInicio) {
+        const fechaSol = sol.fechaInicio.split('T')[0];
+        matchFecha = matchFecha && fechaSol <= this.filtroFechaFinPendientes;
+      }
+
+      return matchTipo && matchRol && matchEmpleado && matchFecha;
     });
   }
 
@@ -390,29 +429,12 @@ export class SolicitudesComponent implements OnInit {
     if (!this.esJefe()) return [];
     
     return this.historialGlobal.filter(sol => {
-      let matchNombre = true;
-      let matchEstado = true;
-      let matchFecha = true;
       let matchRol = true;
+      let matchTipo = true;
+      let matchEstado = true;
       let matchEmpleado = true;
+      let matchFecha = true;
 
-      if (this.filtroNombreHistorial) {
-        matchNombre = sol.empleadoNombre.toLowerCase().includes(this.filtroNombreHistorial.toLowerCase());
-      }
-
-      if (this.filtroEstadoHistorial) {
-        matchEstado = sol.estado === this.filtroEstadoHistorial;
-      }
-
-      if (this.filtroFechaInicioHistorial && sol.fechaInicio) {
-        matchFecha = sol.fechaInicio >= this.filtroFechaInicioHistorial;
-      }
-
-      if (this.filtroFechaFinHistorial && sol.fechaInicio) {
-        matchFecha = matchFecha && sol.fechaInicio <= this.filtroFechaFinHistorial;
-      }
-
-      // Filtro por rol
       if (this.filtroRolHistorial) {
         const empleado = this.todosEmpleados.find(e => e.id === sol.empleadoId);
         if (empleado) {
@@ -420,12 +442,29 @@ export class SolicitudesComponent implements OnInit {
         }
       }
 
-      // Filtro por empleado específico
+      if (this.filtroTipoHistorial) {
+        matchTipo = sol.tipo === this.filtroTipoHistorial;
+      }
+
+      if (this.filtroEstadoHistorial) {
+        matchEstado = sol.estado === this.filtroEstadoHistorial;
+      }
+
       if (this.filtroEmpleadoHistorial) {
         matchEmpleado = sol.empleadoNombre.toLowerCase().includes(this.filtroEmpleadoHistorial.toLowerCase());
       }
 
-      return matchNombre && matchEstado && matchFecha && matchRol && matchEmpleado;
+      if (this.filtroFechaInicioHistorial && sol.fechaInicio) {
+        const fechaSol = sol.fechaInicio.split('T')[0];
+        matchFecha = fechaSol >= this.filtroFechaInicioHistorial;
+      }
+
+      if (this.filtroFechaFinHistorial && sol.fechaInicio) {
+        const fechaSol = sol.fechaInicio.split('T')[0];
+        matchFecha = matchFecha && fechaSol <= this.filtroFechaFinHistorial;
+      }
+
+      return matchRol && matchTipo && matchEstado && matchEmpleado && matchFecha;
     });
   }
 
@@ -434,7 +473,6 @@ export class SolicitudesComponent implements OnInit {
     
     let empleados = this.todosEmpleados;
     
-    // Filtrar por rol si está seleccionado
     if (this.filtroRolPendientes) {
       empleados = empleados.filter(e => e.rol === this.filtroRolPendientes);
     }
@@ -463,15 +501,15 @@ export class SolicitudesComponent implements OnInit {
     switch(this.activeTab) {
       case 'mis-solicitudes':
         this.filtroEstadoMisSolicitudes = '';
+        this.filtroTipoMisSolicitudes = '';
         this.filtroFechaInicioMisSolicitudes = '';
         this.filtroFechaFinMisSolicitudes = '';
         break;
       case 'aprobar':
         this.filtroTipoPendientes = '';
+        this.filtroEmpleadoPendientes = '';
         this.filtroFechaInicioPendientes = '';
         this.filtroFechaFinPendientes = '';
-        this.filtroEmpleadoPendientes = '';
-        // Restaurar filtro por defecto según rol
         if (this.esAdmin()) {
           this.filtroRolPendientes = 'supervisor';
         } else if (this.esSupervisor()) {
@@ -481,12 +519,11 @@ export class SolicitudesComponent implements OnInit {
         }
         break;
       case 'historial':
-        this.filtroNombreHistorial = '';
+        this.filtroTipoHistorial = '';
         this.filtroEstadoHistorial = '';
+        this.filtroEmpleadoHistorial = '';
         this.filtroFechaInicioHistorial = '';
         this.filtroFechaFinHistorial = '';
-        this.filtroEmpleadoHistorial = '';
-        // Restaurar filtro por defecto según rol
         if (this.esAdmin()) {
           this.filtroRolHistorial = 'supervisor';
         } else if (this.esSupervisor()) {
@@ -601,13 +638,13 @@ export class SolicitudesComponent implements OnInit {
         empleadoNombre: sol.empleadoNombre || '',
         rol: empleado?.rol || '',
         tipo: sol.tipo || '',
-        fechaInicio: this.formatearFecha(sol.fechaInicio || ''),
-        fechaFin: this.formatearFecha(sol.fechaFin || ''),
+        fechaInicio: this.formatFechaExport(sol.fechaInicio || ''),
+        fechaFin: this.formatFechaExport(sol.fechaFin || ''),
         dias: this.calcularDias(sol.fechaInicio || '', sol.fechaFin || ''),
         estado: sol.estado || '',
         aprobadoPor: sol.aprobadoPor || (sol.nombreAprobador || 'Pendiente'),
-        fechaSolicitud: this.formatearFechaHora(sol.fechaSolicitud || ''),
-        fechaAprobacion: this.formatearFechaHora(sol.fechaAprobacion || ''),
+        fechaSolicitud: this.formatFechaHora(sol.fechaSolicitud || ''),
+        fechaAprobacion: this.formatFechaHora(sol.fechaAprobacion || ''),
         motivo: sol.motivo || ''
       };
     });
@@ -634,29 +671,38 @@ export class SolicitudesComponent implements OnInit {
     return tituloMap[this.activeTab] || 'Reporte de Solicitudes';
   }
 
+  private formatFechaExport(fecha: string): string {
+    if (!fecha) return '';
+    try {
+      return fecha.split('T')[0];
+    } catch {
+      return fecha;
+    }
+  }
+
   private formatearFecha(fecha: string): string {
     if (!fecha) return '';
     try {
-      const date = new Date(fecha);
-      const dia = date.getDate().toString().padStart(2, '0');
-      const mes = (date.getMonth() + 1).toString().padStart(2, '0');
-      const año = date.getFullYear();
-      return `${dia}/${mes}/${año}`;
+      const fechaISO = fecha.split('T')[0];
+      const [anio, mes, dia] = fechaISO.split('-');
+      return `${dia}/${mes}/${anio}`;
     } catch {
-      return fecha;
+      return fecha.split('T')[0] || fecha;
     }
   }
 
   private formatearFechaHora(fechaHora: string): string {
     if (!fechaHora) return '';
     try {
-      const date = new Date(fechaHora);
-      const dia = date.getDate().toString().padStart(2, '0');
-      const mes = (date.getMonth() + 1).toString().padStart(2, '0');
-      const año = date.getFullYear();
-      const horas = date.getHours().toString().padStart(2, '0');
-      const minutos = date.getMinutes().toString().padStart(2, '0');
-      return `${dia}/${mes}/${año} ${horas}:${minutos}`;
+      const [fechaPart, horaPart] = fechaHora.split('T');
+      const [anio, mes, dia] = fechaPart.split('-');
+      
+      if (horaPart) {
+        const [hora, minutos] = horaPart.split(':');
+        return `${dia}/${mes}/${anio} ${hora}:${minutos}`;
+      }
+      
+      return `${dia}/${mes}/${anio}`;
     } catch {
       return fechaHora;
     }
@@ -665,8 +711,11 @@ export class SolicitudesComponent implements OnInit {
   private calcularDias(inicio: string, fin: string): number {
     if (!inicio || !fin) return 0;
     try {
-      const start = new Date(inicio);
-      const end = new Date(fin);
+      const fechaInicio = inicio.split('T')[0];
+      const fechaFin = fin.split('T')[0];
+      
+      const start = new Date(fechaInicio);
+      const end = new Date(fechaFin);
       const diffTime = Math.abs(end.getTime() - start.getTime());
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     } catch {
@@ -723,7 +772,9 @@ export class SolicitudesComponent implements OnInit {
 
   getFechaActual(): string {
     const hoy = new Date();
-    return hoy.toISOString().split('T')[0];
+    const offset = -5 * 60 * 60 * 1000;
+    const fechaPeru = new Date(hoy.getTime() + offset);
+    return fechaPeru.toISOString().split('T')[0];
   }
 
   formatFecha(fecha: string): string {
