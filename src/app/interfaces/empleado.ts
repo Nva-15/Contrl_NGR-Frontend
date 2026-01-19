@@ -18,6 +18,7 @@ export interface Empleado {
   }
   
   export interface EmpleadoResponse {
+    email: string;
     id?: number;
     dni: string;
     nombre: string;

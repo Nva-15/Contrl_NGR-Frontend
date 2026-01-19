@@ -2,7 +2,6 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth';
-import { ImagenService } from '../../services/imagen';
 
 @Component({
   selector: 'app-main-layout',
@@ -13,11 +12,11 @@ import { ImagenService } from '../../services/imagen';
 })
 export class MainLayoutComponent implements OnInit {
   private auth = inject(AuthService);
-  private imagenService = inject(ImagenService);
   private router = inject(Router);
 
   currentEmpleado: any;
-  fotoUrl: string = ''; // Variable para URL fija
+  fotoUrl: string = '';
+  isMenuCollapsed = false;
 
   ngOnInit() {
     this.currentEmpleado = this.auth.getCurrentEmpleado();
@@ -27,15 +26,37 @@ export class MainLayoutComponent implements OnInit {
       return;
     }
 
-    // Generar URL una sola vez al inicio
-    this.fotoUrl = this.imagenService.getEmpleadoFotoUrl(
+    // Generar URL de foto de perfil
+    this.fotoUrl = this.getFotoUrl(
       this.currentEmpleado?.foto,
       this.currentEmpleado?.nombre
     );
   }
 
+  private getFotoUrl(fotoPath: string | undefined, nombre: string): string {
+    if (!fotoPath || fotoPath === 'img/perfil.png') {
+      return this.getAvatarPlaceholder(nombre);
+    }
+    
+    if (fotoPath.startsWith('http')) {
+      return fotoPath;
+    }
+    
+    const baseUrl = 'http://localhost:8080';
+    return `${baseUrl}/${fotoPath}`;
+  }
+
+  private getAvatarPlaceholder(nombre: string): string {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=0d6efd&color=fff&size=40`;
+  }
+
   onImageError(event: Event): void {
-    this.imagenService.handleImageError(event);
+    const target = event.target as HTMLImageElement;
+    target.src = this.getAvatarPlaceholder(this.currentEmpleado?.nombre || 'Usuario');
+  }
+
+  toggleMenu() {
+    this.isMenuCollapsed = !this.isMenuCollapsed;
   }
 
   logout() {
@@ -49,5 +70,29 @@ export class MainLayoutComponent implements OnInit {
 
   isSupervisor(): boolean {
     return this.auth.isSupervisor();
+  }
+
+  isTecnico(): boolean {
+    return this.auth.isTecnico();
+  }
+
+  isHD(): boolean {
+    return this.auth.isHD();
+  }
+
+  isNOC(): boolean {
+    return this.auth.isNOC();
+  }
+
+  getRolDisplayName(): string {
+    return this.auth.getRolDisplayName();
+  }
+
+  puedeGestionarEmpleados(): boolean {
+    return this.auth.puedeGestionarEmpleados();
+  }
+
+  getUserRole(): string {
+    return this.auth.getUserRole();
   }
 }

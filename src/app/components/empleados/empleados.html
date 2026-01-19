@@ -1,224 +1,621 @@
 <div class="container mt-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div class="d-flex align-items-center">
-        <button class="btn btn-outline-secondary me-3 d-md-none rounded-circle" (click)="volverAlDashboard()">
-          <i class="bi bi-arrow-left"></i>
-        </button>
-        <h3 class="text-primary fw-bold mb-0">
+  <!-- Header Section -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+    <div class="d-flex align-items-center">
+      <button class="btn btn-outline-secondary me-3 d-md-none rounded-circle" 
+              (click)="volverAlDashboard()" 
+              title="Volver al Dashboard">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div>
+        <h3 class="text-primary fw-bold mb-0 d-flex align-items-center">
           <i class="bi bi-people-fill me-2 d-none d-md-inline"></i>Gestión de Personal
         </h3>
+        <span class="badge bg-info mt-1" *ngIf="!puedeGestionarEmpleados()">Solo lectura</span>
+      </div>
+    </div>
+    
+    <!-- Actions Buttons -->
+    <div class="d-flex align-items-center">
+      <div *ngIf="vista === 'lista'" class="d-flex gap-2">
+        <button class="btn btn-outline-success" 
+                (click)="exportarExcel()" 
+                title="Exportar a Excel" 
+                [disabled]="isLoading || empleados.length === 0">
+          <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </button>
+        <button class="btn btn-outline-danger" 
+                (click)="exportarPDF()" 
+                title="Exportar a PDF" 
+                [disabled]="isLoading || empleados.length === 0">
+          <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+        </button>
+        <button class="btn btn-primary ms-2" 
+                (click)="cambiarVista('formulario')" 
+                *ngIf="puedeGestionarEmpleados()" 
+                title="Nuevo Empleado">
+          <i class="bi bi-person-plus-fill me-1"></i>Nuevo
+        </button>
       </div>
       
-      <button class="btn btn-primary" *ngIf="vista === 'lista'" (click)="cambiarVista('formulario')">
-        <i class="bi bi-person-plus-fill me-2"></i>Nuevo
-      </button>
-      <button class="btn btn-outline-secondary" *ngIf="vista === 'formulario'" (click)="cambiarVista('lista')">
-        <i class="bi bi-arrow-left me-2"></i>Volver
+      <button class="btn btn-outline-secondary ms-2" 
+              *ngIf="vista === 'formulario'" 
+              (click)="cambiarVista('lista')" 
+              title="Volver a la lista">
+        <i class="bi bi-arrow-left me-1"></i>Volver
       </button>
     </div>
-  
-    <div *ngIf="vista === 'lista'" class="fade-in">
-      <div class="card shadow-sm border-0 mb-4 bg-light">
-        <div class="card-body py-3">
-          <div class="input-group">
-            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" class="form-control border-start-0" 
-                   placeholder="Buscar por Nombre, DNI o Cargo..." 
-                   [(ngModel)]="filtroBusqueda" (keyup)="filtrar()">
-          </div>
+  </div>
+
+  <!-- List View -->
+  <div *ngIf="vista === 'lista'" class="fade-in">
+    <!-- Messages -->
+    <div *ngIf="mensaje" class="alert alert-success alert-dismissible fade show mb-4">
+      <i class="bi bi-check-circle-fill me-2"></i>{{ mensaje }}
+      <button type="button" class="btn-close" (click)="mensaje = ''"></button>
+    </div>
+    
+    <div *ngIf="mensajeError" class="alert alert-danger alert-dismissible fade show mb-4">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ mensajeError }}
+      <button type="button" class="btn-close" (click)="mensajeError = ''"></button>
+    </div>
+
+    <!-- Search Card -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-search"></i>
+          </span>
+          <input type="text" 
+                 class="form-control" 
+                 placeholder="Buscar por Nombre, DNI, Email, Cargo o Usuario..." 
+                 [(ngModel)]="filtroBusqueda" 
+                 (keyup)="filtrar()">
+          <button class="btn btn-outline-secondary" 
+                  type="button" 
+                  (click)="filtrar()">
+            <i class="bi bi-funnel"></i>
+          </button>
         </div>
+        <small class="text-muted mt-2 d-block">
+          Mostrando {{empleadosFiltrados.length}} de {{empleados.length}} empleados
+        </small>
       </div>
-  
-      <div *ngIf="mensaje" class="alert alert-success d-flex align-items-center">
-          <i class="bi bi-check-circle-fill me-2"></i>{{ mensaje }}
+    </div>
+
+    <!-- Employees Table Card -->
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="mb-0">
+            <i class="bi bi-list-ul me-2"></i>Listado de Empleados
+          </h6>
+          <small class="opacity-75">* Solo ADMIN y SUPERVISOR pueden editar</small>
+        </div>
+        <span class="badge bg-white text-primary">{{empleadosFiltrados.length}}</span>
       </div>
-  
-      <div class="card shadow-sm border-0">
-        <div class="table-responsive">
+      
+      <div class="card-body p-0">
+        <div class="table-responsive" *ngIf="!isLoading || empleados.length > 0">
           <table class="table table-hover align-middle mb-0">
-            <thead class="bg-primary text-white">
+            <thead class="table-light">
               <tr>
                 <th class="ps-3">Empleado</th>
-                <th>Info Laboral</th>
+                <th>Información Laboral</th>
                 <th>Credenciales</th>
                 <th>Estado</th>
                 <th class="text-end pe-3">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let emp of empleadosFiltrados">
-                <td class="ps-3">
-                  <div class="fw-bold text-primary">{{ emp.nombre }}</div>
-                  <small class="text-muted"><i class="bi bi-card-heading me-1"></i>{{ emp.dni }}</small>
-                </td>
-                <td>
-                  <div class="fw-bold text-dark">{{ emp.cargo || 'Sin Cargo' }}</div>
-                  <small class="text-muted d-block" *ngIf="emp.ingreso">Ingreso: {{ emp.ingreso | date:'dd/MM/yy' }}</small>
-                </td>
-                <td>
-                  <div class="small"><i class="bi bi-person me-1"></i>{{ emp.username }}</div>
-                  <span class="badge bg-secondary rounded-pill" style="font-size: 0.7rem;">{{ emp.rol | uppercase }}</span>
-                </td>
-                <td>
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" [checked]="emp.usuarioActivo" disabled>
+              <!-- Loading State -->
+              <tr *ngIf="isLoading && empleados.length === 0">
+                <td colspan="5" class="text-center py-5">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
                   </div>
-                </td>
-                <td class="text-end pe-3">
-                  <button class="btn btn-sm btn-outline-primary me-2" (click)="editar(emp)" title="Editar">
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger" (click)="eliminar(emp.id!)" title="Desactivar">
-                    <i class="bi bi-trash"></i>
-                  </button>
+                  <p class="mt-2 text-muted">Cargando empleados...</p>
                 </td>
               </tr>
-              <tr *ngIf="empleadosFiltrados.length === 0">
-                <td colspan="5" class="text-center py-5 text-muted">No se encontraron registros.</td>
+              
+              <!-- Employee Rows -->
+              <tr *ngFor="let emp of empleadosFiltrados">
+                <td class="ps-3">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                      <img [src]="getFotoUrl(emp.foto, emp.nombre)" 
+                           (error)="handleImageError($event, emp.nombre)"
+                           class="rounded-circle me-3" 
+                           alt="{{emp.nombre}}"
+                           style="width: 50px; height: 50px; object-fit: cover;">
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="fw-bold">{{ emp.nombre }}</div>
+                      <small class="text-muted d-block">
+                        <i class="bi bi-card-heading me-1"></i>{{ emp.dni }}
+                      </small>
+                      <small class="text-muted" *ngIf="emp.cumpleanos">
+                        <i class="bi bi-balloon me-1"></i>{{ emp.cumpleanos | date:'dd/MM' }}
+                      </small>
+                    </div>
+                  </div>
+                </td>
+                
+                <td>
+                  <div class="fw-bold">{{ emp.cargo || 'Sin Cargo' }}</div>
+                  <span class="badge bg-secondary mb-1">{{ getNivelDisplay(emp.nivel) }}</span>
+                  <div *ngIf="emp.email">
+                    <small class="text-muted d-block">
+                      <i class="bi bi-envelope me-1"></i>{{ emp.email }}
+                    </small>
+                  </div>
+                  <small class="text-muted" *ngIf="emp.ingreso">
+                    <i class="bi bi-calendar me-1"></i>{{ emp.ingreso | date:'dd/MM/yy' }}
+                  </small>
+                </td>
+                
+                <td>
+                  <div class="small">
+                    <i class="bi bi-person me-1"></i>{{ emp.username || emp.dni }}
+                  </div>
+                  <span class="badge mt-1" 
+                        [ngClass]="{
+                          'bg-warning text-dark': emp.rol === 'admin',
+                          'bg-info text-white': emp.rol === 'supervisor',
+                          'bg-secondary': emp.rol === 'tecnico',
+                          'bg-success': emp.rol === 'hd',
+                          'bg-danger': emp.rol === 'noc'
+                        }">
+                    {{ getRolDisplay(emp.rol) }}
+                  </span>
+                </td>
+                
+                <td>
+                  <div class="d-flex flex-column gap-2">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" 
+                             type="checkbox" 
+                             [checked]="emp.usuarioActivo"
+                             (change)="cambiarEstado(emp.id!, $event.target.checked)"
+                             [disabled]="!puedeGestionarEmpleados() || isLoading"
+                             [id]="'switch-' + emp.id"
+                             (click)="$event.stopPropagation()">
+                      <label class="form-check-label small" 
+                             [for]="'switch-' + emp.id">
+                        {{ emp.usuarioActivo ? 'Activo' : 'Inactivo' }}
+                      </label>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-1">
+                      <span class="badge" 
+                            [ngClass]="emp.usuarioActivo ? 'bg-success' : 'bg-secondary'">
+                        <i class="bi" 
+                           [class.bi-person-check]="emp.usuarioActivo" 
+                           [class.bi-person-x]="!emp.usuarioActivo"></i>
+                        Sesión {{ emp.usuarioActivo ? 'activa' : 'bloqueada' }}
+                      </span>
+                      <span class="badge" 
+                            [ngClass]="emp.activo ? 'bg-info' : 'bg-warning'">
+                        <i class="bi" 
+                           [class.bi-diagram-3]="emp.activo" 
+                           [class.bi-eye-slash]="!emp.activo"></i>
+                        {{ emp.activo ? 'Visible' : 'Oculto' }}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+                
+                <td class="text-end pe-3">
+                  <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-sm btn-outline-primary" 
+                            (click)="editar(emp)" 
+                            [title]="getTooltipEdicion(emp)"
+                            *ngIf="puedeGestionarEmpleados()"
+                            [disabled]="isLoading || !puedeEditarEmpleado(emp)">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" 
+                            (click)="eliminar(emp.id!)" 
+                            title="Desactivar usuario"
+                            *ngIf="puedeGestionarEmpleados()"
+                            [disabled]="!emp.usuarioActivo || isLoading">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              
+              <!-- No Results -->
+              <tr *ngIf="empleadosFiltrados.length === 0 && !isLoading">
+                <td colspan="5" class="text-center py-5">
+                  <i class="bi bi-search display-6 text-muted mb-3"></i>
+                  <p class="text-muted mb-2">No se encontraron empleados</p>
+                  <small *ngIf="filtroBusqueda" class="text-muted">
+                    Intenta con otros términos de búsqueda
+                  </small>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-  
-    <div *ngIf="vista === 'formulario'" class="row justify-content-center fade-in">
-      <div class="col-lg-8">
-        <div class="card shadow border-0">
-          <div class="card-header bg-primary text-white py-3">
+  </div>
+
+  <!-- Form View -->
+  <div *ngIf="vista === 'formulario'" class="row justify-content-center fade-in">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header" 
+             [ngClass]="{'bg-primary text-white': !isEditing, 'bg-warning text-dark': isEditing}">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
             <h5 class="mb-0">
               <i class="bi" [class.bi-person-plus]="!isEditing" [class.bi-pencil-square]="isEditing"></i>
               {{ isEditing ? 'Editar Empleado' : 'Registrar Nuevo Empleado' }}
             </h5>
+            <div class="d-flex gap-2">
+              <span *ngIf="isEditing" class="badge bg-light text-dark">ID: {{empForm.get('id')?.value}}</span>
+              <span *ngIf="isEditing && formHasChanges" class="badge bg-warning text-dark">
+                <i class="bi bi-exclamation-circle me-1"></i>Cambios detectados
+              </span>
+            </div>
           </div>
-          <div class="card-body p-4">
+        </div>
+        
+        <div class="card-body">
+          <!-- Error Message -->
+          <div *ngIf="mensajeError" class="alert alert-danger mb-4">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ mensajeError }}
+          </div>
+          
+          <!-- Form -->
+          <form [formGroup]="empForm" (ngSubmit)="guardar()" novalidate>
             
-            <form [formGroup]="empForm" (ngSubmit)="guardar()">
+            <!-- Personal Data Section -->
+            <div class="mb-5">
+              <h6 class="text-primary border-bottom pb-2 mb-4">
+                <i class="bi bi-person-badge me-2"></i>Datos Personales
+              </h6>
               
-              <h6 class="text-muted text-uppercase small fw-bold mb-3">Datos Personales</h6>
-              
-              <div class="row mb-3">
-                <div class="col-md-4">
+              <div class="row g-3">
+                <div class="col-md-3">
                   <label class="form-label fw-bold">Tipo Documento</label>
                   <select class="form-select" formControlName="tipoDoc">
-                    <option value="DNI">DNI (8)</option>
-                    <option value="CE">C. Extranjería (11)</option>
+                    <option value="DNI">DNI (8 dígitos)</option>
+                    <option value="CE">Carné Extranjería (11 dígitos)</option>
                   </select>
                 </div>
                 
-                <div class="col-md-8">
+                <div class="col-md-5">
                   <label class="form-label fw-bold">
-                      {{ tipoDocumento === 'DNI' ? 'Número DNI (8)' : 'Carné Extranjería (11)' }} *
+                    {{ tipoDocumento === 'DNI' ? 'Número DNI' : 'Carné Extranjería' }}
                   </label>
-                  <input type="text" class="form-control" formControlName="dni" 
+                  <input type="text" 
+                         class="form-control" 
+                         formControlName="dni" 
                          [class.is-invalid]="esInvalido('dni')"
                          [maxlength]="tipoDocumento === 'DNI' ? 8 : 11" 
+                         placeholder="Ingrese solo números"
                          oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                  
-                  <div class="invalid-feedback">
-                    Debe tener {{ tipoDocumento === 'DNI' ? '8' : '11' }} dígitos exactos.
+                  <div class="invalid-feedback" *ngIf="esInvalido('dni')">
+                    {{ tipoDocumento === 'DNI' ? 'Debe tener 8 dígitos numéricos' : 'Debe tener 11 dígitos numéricos' }}
                   </div>
                 </div>
-              </div>
-  
-              <div class="mb-3">
-                 <label class="form-label fw-bold">Nombre Completo *</label>
-                 <input type="text" class="form-control" formControlName="nombre" 
-                        [class.is-invalid]="esInvalido('nombre')">
-                 <div class="invalid-feedback">El nombre es requerido (mínimo 3 letras).</div>
-              </div>
-  
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Fecha Nacimiento *</label>
-                  <input type="date" class="form-control" formControlName="cumpleanos" 
-                         [class.is-invalid]="esInvalido('cumpleanos')">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Fecha Ingreso *</label>
-                  <input type="date" class="form-control" formControlName="ingreso" 
-                         [class.is-invalid]="esInvalido('ingreso')">
-                </div>
-              </div>
-  
-              <div class="row mb-3">
-                  <div class="col-md-6">
-                      <label class="form-label">Hobby / Pasatiempo</label>
-                      <input type="text" class="form-control" formControlName="hobby" placeholder="Ej: Fútbol, Leer...">
+                
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Email</label>
+                  <input type="email" 
+                         class="form-control" 
+                         formControlName="email" 
+                         [class.is-invalid]="esInvalido('email')"
+                         placeholder="ejemplo@ngr.com.pe">
+                  <div class="invalid-feedback" *ngIf="esInvalido('email')">
+                    Ingrese un email válido
                   </div>
-                  <div class="col-md-6">
-                      <label class="form-label">Descripción Breve</label>
-                      <textarea class="form-control" rows="1" formControlName="descripcion" placeholder="Sobre el empleado..."></textarea>
-                  </div>
-              </div>
-  
-              <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-4">Información Laboral</h6>
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label class="form-label">Cargo</label>
-                  <input type="text" class="form-control" formControlName="cargo" placeholder="Ej: Supervisor">
                 </div>
+                
+                <div class="col-12">
+                  <label class="form-label fw-bold">Nombre Completo</label>
+                  <input type="text" 
+                         class="form-control" 
+                         formControlName="nombre" 
+                         [class.is-invalid]="esInvalido('nombre')"
+                         placeholder="Ej: Juan Pérez García">
+                  <div class="invalid-feedback" *ngIf="esInvalido('nombre')">
+                    El nombre es requerido (mínimo 3 caracteres)
+                  </div>
+                </div>
+                
                 <div class="col-md-6">
-                  <label class="form-label">Nivel</label>
-                  <select class="form-select" formControlName="nivel">
-                    <option value="tecnico">Técnico</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="jefe">Jefe / Gerente</option>
+                  <label class="form-label fw-bold">Fecha de Nacimiento</label>
+                  <input type="date" 
+                         class="form-control" 
+                         formControlName="cumpleanos" 
+                         [class.is-invalid]="esInvalido('cumpleanos')"
+                         [max]="fechaHoy">
+                  <div class="form-text">Formato: DD/MM/AAAA</div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Fecha de Ingreso</label>
+                  <input type="date" 
+                         class="form-control" 
+                         formControlName="ingreso" 
+                         [class.is-invalid]="esInvalido('ingreso')"
+                         [max]="fechaHoy">
+                  <div class="form-text">Formato: DD/MM/AAAA</div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Hobby / Pasatiempo</label>
+                  <input type="text" 
+                         class="form-control" 
+                         formControlName="hobby" 
+                         placeholder="Ej: Fútbol, Música, Lectura...">
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Descripción Breve</label>
+                  <textarea class="form-control" 
+                            rows="2" 
+                            formControlName="descripcion" 
+                            placeholder="Una breve descripción del empleado..."></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Job Information Section -->
+            <div class="mb-5">
+              <h6 class="text-primary border-bottom pb-2 mb-4">
+                <i class="bi bi-briefcase me-2"></i>Información Laboral
+              </h6>
+              
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Cargo</label>
+                  <input type="text" 
+                         class="form-control" 
+                         formControlName="cargo" 
+                         [class.is-invalid]="esInvalido('cargo')"
+                         placeholder="Ej: Supervisor, Técnico, Jefe...">
+                  <div class="invalid-feedback" *ngIf="esInvalido('cargo')">
+                    El cargo es requerido
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Nivel Jerárquico</label>
+                  <select class="form-select" 
+                          formControlName="nivel" 
+                          [class.is-invalid]="esInvalido('nivel')">
+                    <option value="">Seleccione un nivel</option>
+                    <option *ngFor="let nivel of niveles" [value]="nivel.value">
+                      {{ nivel.label }}
+                    </option>
                   </select>
+                  <div class="invalid-feedback" *ngIf="esInvalido('nivel')">
+                    El nivel es requerido
+                  </div>
                 </div>
               </div>
-  
-              <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-4">Credenciales de Acceso</h6>
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Usuario (Automático)</label>
-                  <input type="text" class="form-control bg-light" formControlName="username" readonly>
-                  <div class="form-text small">Se usa el número de documento como usuario.</div>
+            </div>
+
+            <!-- Credentials Section -->
+            <div class="mb-5">
+              <h6 class="text-primary border-bottom pb-2 mb-4">
+                <i class="bi bi-key me-2"></i>Credenciales de Acceso
+              </h6>
+              
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Usuario</label>
+                  <input type="text" 
+                         class="form-control" 
+                         formControlName="username" 
+                         [class.is-invalid]="esInvalido('username')"
+                         [readonly]="!isEditing && empForm.get('dni')?.value"
+                         placeholder="Se genera automáticamente">
+                  <div class="form-text">Usualmente el número de documento</div>
                 </div>
-                <div class="col-md-6">
-                  <label class="form-label">Rol de Permisos</label>
-                  <select class="form-select" formControlName="rol">
-                    <option value="tecnico">Técnico (Básico)</option>
-                    <option value="supervisor">Supervisor (Gestión)</option>
-                    <option value="admin">Administrador (Total)</option>
+                
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Rol de Permisos</label>
+                  <select class="form-select" 
+                          formControlName="rol" 
+                          [class.is-invalid]="esInvalido('rol')">
+                    <option value="">Seleccione un rol</option>
+                    <option *ngFor="let rol of roles" [value]="rol.value">
+                      {{ rol.label }}
+                    </option>
                   </select>
+                  <div class="invalid-feedback" *ngIf="esInvalido('rol')">
+                    El rol es requerido
+                  </div>
                 </div>
-              </div>
-  
-              <div class="row mb-3">
-                <div class="col-md-6">
-                   <label class="form-label">Foto (Ruta)</label>
-                   <input type="text" class="form-control" formControlName="foto" placeholder="img/perfil.png">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" [class.text-primary]="isEditing">
-                      {{ isEditing ? 'Nueva Contraseña' : 'Contraseña' }}
+                
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">
+                    {{ isEditing ? 'Nueva Contraseña' : 'Contraseña' }}
                   </label>
-                  <input type="password" class="form-control" formControlName="password" 
-                         [placeholder]="isEditing ? 'Dejar vacío para no cambiar' : 'Por defecto: password'">
+                  <input type="password" 
+                         class="form-control" 
+                         formControlName="password" 
+                         [placeholder]="isEditing ? 'Dejar vacío para mantener' : 'Mínimo 6 caracteres'"
+                         [minlength]="6">
+                  <div class="form-text">
+                    {{ isEditing ? 'Solo llenar para cambiar' : 'Por defecto: "password"' }}
+                  </div>
                 </div>
               </div>
-  
-              <div class="mb-4 bg-light p-3 rounded">
-                  <div class="form-check form-switch">
-                      <input class="form-check-input" type="checkbox" formControlName="usuarioActivo" id="uActivo">
-                      <label class="form-check-label fw-bold" for="uActivo">Usuario Activo (Puede hacer Login)</label>
+            </div>
+
+            <!-- Profile Image Section -->
+            <div class="mb-5">
+              <h6 class="text-primary border-bottom pb-2 mb-4">
+                <i class="bi bi-image me-2"></i>Imagen de Perfil
+              </h6>
+              
+              <div class="row g-4">
+                <div class="col-md-4">
+                  <div class="card">
+                    <div class="card-body text-center">
+                      <img [src]="fotoPreview || getFotoUrl(fotoActual || empForm.get('foto')?.value, empForm.get('nombre')?.value)"
+                           (error)="handleImageError($event, empForm.get('nombre')?.value)"
+                           class="img-fluid rounded mb-3" 
+                           style="max-height: 200px; object-fit: cover;"
+                           alt="Preview de imagen">
+                      <small class="text-muted d-block">
+                        {{ fotoFile?.name || 'Sin imagen seleccionada' }}
+                      </small>
+                    </div>
                   </div>
+                </div>
+                
+                <div class="col-md-8">
+                  <label class="form-label fw-bold">Seleccionar Imagen</label>
+                  <div class="input-group mb-3">
+                    <input type="file" 
+                           class="form-control" 
+                           accept=".jpg,.jpeg,.png,.gif"
+                           (change)="onFileSelected($event)"
+                           #fileInput>
+                    <button class="btn btn-outline-secondary" 
+                            type="button" 
+                            (click)="cancelarSeleccionImagen()">
+                      <i class="bi bi-x-circle me-1"></i>Limpiar
+                    </button>
+                  </div>
+                  <div class="alert alert-info small mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Formatos permitidos: JPG, PNG, GIF (máx. 5MB). 
+                    La imagen se subirá al backend y se renombrará automáticamente.
+                  </div>
+                  <input type="hidden" formControlName="foto">
+                </div>
               </div>
-  
-              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <button type="button" class="btn btn-outline-secondary me-2" (click)="cambiarVista('lista')">Cancelar</button>
-                <button type="submit" class="btn btn-success px-5" [disabled]="isLoading || empForm.invalid">
+            </div>
+
+            <!-- User Status Section -->
+            <div class="mb-5">
+              <h6 class="text-primary border-bottom pb-2 mb-4">
+                <i class="bi bi-toggle-on me-2"></i>Estado del Usuario
+              </h6>
+              
+              <!-- Status Toggle Button -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <div class="text-center mb-4">
+                    <button type="button" 
+                            class="btn btn-lg px-5 py-3"
+                            [ngClass]="{
+                              'btn-success': empForm.get('usuarioActivo')?.value,
+                              'btn-secondary': !empForm.get('usuarioActivo')?.value
+                            }"
+                            [title]="empForm.get('usuarioActivo')?.value ? 'Cambiar a inactivo' : 'Cambiar a activo'"
+                            (click)="empForm.get('usuarioActivo')?.setValue(!empForm.get('usuarioActivo')?.value)">
+                      <i class="bi" 
+                         [class.bi-person-check]="empForm.get('usuarioActivo')?.value"
+                         [class.bi-person-x]="!empForm.get('usuarioActivo')?.value"></i>
+                      {{ empForm.get('usuarioActivo')?.value ? 'USUARIO ACTIVO' : 'USUARIO INACTIVO' }}
+                    </button>
+                  </div>
+                  
+                  <!-- Status Indicators -->
+                  <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                      <div class="d-flex align-items-center">
+                        <div class="me-3">
+                          <i class="bi bi-person-check fs-4" 
+                             [ngClass]="empForm.get('usuarioActivo')?.value ? 'text-success' : 'text-muted'"></i>
+                        </div>
+                        <div>
+                          <strong>Puede iniciar sesión:</strong><br>
+                          <span class="small">
+                            {{ empForm.get('usuarioActivo')?.value ? 
+                              'El usuario puede acceder al sistema' : 
+                              'El usuario NO puede acceder al sistema' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                      <div class="d-flex align-items-center">
+                        <div class="me-3">
+                          <i class="bi bi-diagram-3 fs-4" 
+                             [ngClass]="empForm.get('activo')?.value ? 'text-info' : 'text-muted'"></i>
+                        </div>
+                        <div>
+                          <strong>Aparece en organigrama:</strong><br>
+                          <span class="small">
+                            {{ empForm.get('activo')?.value ? 
+                              'Visible en listados y organigrama' : 
+                              'Oculto en listados y organigrama' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Admin Toggles -->
+                  <div *ngIf="authService.isAdmin()" class="row mt-4">
+                    <div class="col-md-6">
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               formControlName="usuarioActivo" 
+                               id="usuarioActivo">
+                        <label class="form-check-label fw-bold" for="usuarioActivo">
+                          Usuario Activo
+                        </label>
+                        <div class="form-text">
+                          <i class="bi bi-person-check me-1"></i>
+                          Puede iniciar sesión en el sistema
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               formControlName="activo" 
+                               id="activo">
+                        <label class="form-check-label fw-bold" for="activo">
+                          Activo en la Empresa
+                        </label>
+                        <div class="form-text">
+                          <i class="bi bi-diagram-3 me-1"></i>
+                          Aparece en listados y organigrama
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="border-top pt-4">
+              <div class="d-flex justify-content-end gap-3">
+                <button type="button" 
+                        class="btn btn-outline-secondary px-4" 
+                        (click)="cambiarVista('lista')">
+                  <i class="bi bi-x-circle me-1"></i>Cancelar
+                </button>
+                <button type="submit" 
+                        class="btn btn-success px-5" 
+                        [disabled]="!isFormValid()">
                   <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
-                  Guardar
+                  <i class="bi" [class.bi-save]="!isLoading" [class.bi-check-circle]="isEditing && !isLoading"></i>
+                  {{ isEditing ? 'Actualizar' : 'Guardar' }}
                 </button>
               </div>
-  
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
-  
   </div>
+</div>

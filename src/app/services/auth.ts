@@ -13,7 +13,7 @@ export class AuthService {
     this.initializeAuthState();
   }
 
-  initializeAuthState() {
+  private initializeAuthState() {
     const token = localStorage.getItem('token');
     if (token && this.isTokenExpired(token)) {
       this.logout();
@@ -35,6 +35,7 @@ export class AuthService {
         tap(response => {
           localStorage.setItem('token', response.token);
           localStorage.setItem('currentEmpleado', JSON.stringify(response.empleado));
+          localStorage.setItem('userRole', response.empleado.rol);
         })
       );
   }
@@ -42,6 +43,7 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('currentEmpleado');
+    localStorage.removeItem('userRole');
   }
 
   isLoggedIn(): boolean {
@@ -58,28 +60,68 @@ export class AuthService {
     return empleado ? JSON.parse(empleado) : null;
   }
 
-  hasRole(role: string): boolean {
+  // MÉTODOS DE CONTROL DE ROLES (ACTUALIZADOS)
+  getUserRole(): string {
     const empleado = this.getCurrentEmpleado();
-    if (!empleado) return false;
-    
-    const userRole = 'ROLE_' + empleado.rol.toUpperCase();
-    const requestedRole = role.toUpperCase();
-    
-    return userRole === requestedRole || 
-           requestedRole.includes(userRole.replace('ROLE_', '')) ||
-           userRole.includes(requestedRole.replace('ROLE_', ''));
+    if (empleado?.rol) return empleado.rol.toLowerCase();
+    return localStorage.getItem('userRole')?.toLowerCase() || '';
+  }
+
+  hasRole(role: string): boolean {
+    const userRole = this.getUserRole();
+    const requestedRole = role.toLowerCase();
+    return userRole === requestedRole;
   }
 
   isAdmin(): boolean {
-    return this.hasRole('ADMIN');
+    return this.getUserRole() === 'admin';
   }
 
   isSupervisor(): boolean {
-    return this.hasRole('SUPERVISOR');
+    return this.getUserRole() === 'supervisor';
   }
 
   isTecnico(): boolean {
-    return this.hasRole('TECNICO');
+    return this.getUserRole() === 'tecnico';
+  }
+
+  isHD(): boolean {
+    return this.getUserRole() === 'hd';
+  }
+
+  isNOC(): boolean {
+    return this.getUserRole() === 'noc';
+  }
+
+  // MÉTODO CRÍTICO: Verificar si puede gestionar empleados
+  puedeGestionarEmpleados(): boolean {
+    const rol = this.getUserRole();
+    return rol === 'admin' || rol === 'supervisor';
+  }
+
+  // NUEVO MÉTODO CRÍTICO: Permisos específicos para edición
+  puedeEditarEmpleado(empleado: any): boolean {
+    const userRole = this.getUserRole();
+    const currentUser = this.getCurrentEmpleado();
+    const esMiPerfil = currentUser && currentUser.id === empleado.id;
+    
+    if (userRole === 'admin') {
+      return true;
+    }
+    
+    if (userRole === 'supervisor') {
+      // ✅ Permitir editar su propio perfil
+      if (esMiPerfil) {
+        return true;
+      }
+      
+      // ✅ Permitir editar técnicos, HD y NOC (pero NO otros supervisores ni admins)
+      const rolesPermitidos = ['tecnico', 'hd', 'noc'];
+      const empleadoRol = empleado.rol?.toLowerCase();
+      return rolesPermitidos.includes(empleadoRol || '');
+    }
+    
+    return false;
   }
 
   verifyToken(): Observable<TokenVerifyResponse> {
@@ -92,5 +134,18 @@ export class AuthService {
       passwordActual,
       passwordNueva
     });
+  }
+
+  // Método para obtener el nombre del rol legible
+  getRolDisplayName(): string {
+    const rol = this.getUserRole();
+    switch(rol) {
+      case 'admin': return 'Administrador';
+      case 'supervisor': return 'Supervisor';
+      case 'tecnico': return 'Técnico';
+      case 'hd': return 'HD';
+      case 'noc': return 'NOC';
+      default: return 'Usuario';
+    }
   }
 }

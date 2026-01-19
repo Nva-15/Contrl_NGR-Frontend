@@ -4,7 +4,6 @@ import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth';
 import { AsistenciaService } from '../../services/asistencia';
-import { ImagenService } from '../../services/imagen';
 
 @Component({
   selector: 'app-dashboard',
@@ -16,7 +15,6 @@ import { ImagenService } from '../../services/imagen';
 export class DashboardComponent implements OnInit {
   private auth = inject(AuthService);
   private asistenciaService = inject(AsistenciaService);
-  private imagenService = inject(ImagenService);
   private router = inject(Router);
 
   currentEmpleado: any;
@@ -37,8 +35,8 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    // URL foto perfil
-    this.fotoUrl = this.imagenService.getEmpleadoFotoUrl(
+    // Generar URL de foto de perfil
+    this.fotoUrl = this.getFotoUrl(
       this.currentEmpleado.foto, 
       this.currentEmpleado.nombre
     );
@@ -46,8 +44,26 @@ export class DashboardComponent implements OnInit {
     this.cargarAsistencia();
   }
 
+  private getFotoUrl(fotoPath: string | undefined, nombre: string): string {
+    if (!fotoPath || fotoPath === 'img/perfil.png') {
+      return this.getAvatarPlaceholder(nombre);
+    }
+    
+    if (fotoPath.startsWith('http')) {
+      return fotoPath;
+    }
+    
+    const baseUrl = 'http://localhost:8080';
+    return `${baseUrl}/${fotoPath}`;
+  }
+
+  private getAvatarPlaceholder(nombre: string): string {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=0d6efd&color=fff&size=150`;
+  }
+
   onImageError(event: Event): void {
-    this.imagenService.handleImageError(event, this.currentEmpleado?.nombre);
+    const target = event.target as HTMLImageElement;
+    target.src = this.getAvatarPlaceholder(this.currentEmpleado?.nombre || 'Usuario');
   }
 
   // Carga asistencia del día actual
@@ -141,5 +157,13 @@ export class DashboardComponent implements OnInit {
   irASolicitudes() {
     const tab = (this.isAdmin() || this.isSupervisor()) ? 'aprobar' : 'mis-solicitudes';
     this.router.navigate(['/solicitudes'], { queryParams: { tab } });
+  }
+
+  getUserRole(): string {
+    return this.auth.getUserRole();
+  }
+
+  getRolDisplayName(): string {
+    return this.auth.getRolDisplayName();
   }
 }

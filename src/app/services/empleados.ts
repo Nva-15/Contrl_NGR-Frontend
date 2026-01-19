@@ -19,10 +19,6 @@ export class EmpleadosService {
     return this.http.get<EmpleadoResponse>(`${this.apiUrl}/${id}`);
   }
 
-  getEmpleadoByDni(dni: string): Observable<EmpleadoResponse> {
-    return this.http.get<EmpleadoResponse>(`${this.apiUrl}/dni/${dni}`);
-  }
-
   createEmpleado(empleado: Empleado): Observable<EmpleadoResponse> {
     return this.http.post<EmpleadoResponse>(this.apiUrl, empleado);
   }
@@ -45,5 +41,29 @@ export class EmpleadosService {
 
   buscarEmpleados(nombre: string): Observable<EmpleadoResponse[]> {
     return this.http.get<EmpleadoResponse[]>(`${this.apiUrl}/buscar?nombre=${nombre}`);
+  }
+
+  // NUEVOS MÉTODOS CRÍTICOS
+  actualizarPerfil(id: number, datos: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/actualizar-perfil/${id}`, datos);
+  }
+
+  cambiarPasswordAdmin(id: number, passwordNueva: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cambiar-password-admin/${id}`, { passwordNueva });
+  }
+
+  exportarEmpleados(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/exportar`);
+  }
+
+  cambiarEstadoUsuario(id: number, estado: boolean): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/estado`, { 
+      usuarioActivo: estado,
+      activo: estado 
+    });
+  }
+
+  actualizarEmail(id: number, email: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/actualizar-email/${id}`, { email });
   }
 }
