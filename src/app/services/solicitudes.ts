@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError, forkJoin } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Solicitud, SolicitudResponse } from '../interfaces/solicitud';
 
@@ -14,9 +14,6 @@ export class SolicitudesService {
   crearSolicitud(solicitud: any): Observable<SolicitudResponse> {
     return this.http.post<SolicitudResponse>(`${this.apiUrl}/crear`, solicitud).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 409) {
-          return throwError(() => error.error.error || 'Conflicto de fechas detectado');
-        }
         return throwError(() => error.error?.error || 'Error al crear solicitud');
       })
     );
@@ -54,12 +51,32 @@ export class SolicitudesService {
     return this.http.put<SolicitudResponse>(`${this.apiUrl}/editar/${id}`, datos);
   }
 
+  // Verificar conflictos por rol
+  verificarConflictosPorRol(empleadoId: number, rolEmpleado: string, fechaInicio: string, fechaFin: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/verificar-conflictos-por-rol`, {
+      empleadoId,
+      rolEmpleado,
+      fechaInicio,
+      fechaFin
+    }).pipe(
+      map((response: any) => response),
+      catchError((error: HttpErrorResponse) => {
+        return throwError(() => error.error?.error || 'Error al verificar conflictos');
+      })
+    );
+  }
+  
   verificarConflictos(empleadoId: number, fechaInicio: string, fechaFin: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/verificar-conflictos`, {
       empleadoId,
       fechaInicio,
       fechaFin
-    });
+    }).pipe(
+      map((response: any) => response),
+      catchError((error: HttpErrorResponse) => {
+        return throwError(() => error.error?.error || 'Error al verificar conflictos');
+      })
+    );
   }
 
   verificarDisponibilidadEquipo(fechaInicio: string, fechaFin: string): Observable<any> {
@@ -67,22 +84,6 @@ export class SolicitudesService {
       fechaInicio,
       fechaFin
     });
-  }
-
-  verificarConflictosCompletos(empleadoId: number, fechaInicio: string, fechaFin: string): Observable<any> {
-    return forkJoin({
-      conflictosPropios: this.verificarConflictos(empleadoId, fechaInicio, fechaFin),
-      conflictosEquipo: this.verificarDisponibilidadEquipo(fechaInicio, fechaFin)
-    }).pipe(
-      map(resultado => ({
-        conflictosPropios: resultado.conflictosPropios.conflictos || [],
-        tieneConflictosPropios: resultado.conflictosPropios.tieneConflictos || false,
-        conflictosGlobales: resultado.conflictosEquipo.conflictos || [],
-        tieneConflictosGlobales: resultado.conflictosEquipo.tieneConflictos || false,
-        tieneConflictosTotales: (resultado.conflictosPropios.tieneConflictos || false) || 
-                               (resultado.conflictosEquipo.tieneConflictos || false)
-      }))
-    );
   }
 
   exportarSolicitudes(tipo: string, empleadoId?: number, formato: string = 'json'): Observable<any> {

@@ -1,11 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule, formatDate } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { SolicitudesService } from '../../services/solicitudes';
 import { AuthService } from '../../services/auth';
 import { ExportService } from '../../services/export';
 import { SolicitudResponse } from '../../interfaces/solicitud';
 import { ActivatedRoute } from '@angular/router';
+import { EmpleadosService } from '../../services/empleados';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-solicitudes',
@@ -17,25 +18,34 @@ export class SolicitudesComponent implements OnInit {
   private solicitudesService = inject(SolicitudesService);
   private authService = inject(AuthService);
   private exportService = inject(ExportService);
+  private empleadosService = inject(EmpleadosService);
   private route = inject(ActivatedRoute);
 
   currentUser: any;
   misSolicitudes: SolicitudResponse[] = [];
   solicitudesPendientes: SolicitudResponse[] = [];
   historialGlobal: SolicitudResponse[] = [];
+  todosEmpleados: any[] = [];
   
+  // Filtros para MIS SOLICITUDES
   filtroEstadoMisSolicitudes = '';
   filtroFechaInicioMisSolicitudes = '';
   filtroFechaFinMisSolicitudes = '';
   
+  // Filtros para PENDIENTES (solo jefes/supervisores)
   filtroTipoPendientes = '';
   filtroFechaInicioPendientes = '';
   filtroFechaFinPendientes = '';
+  filtroRolPendientes = '';
+  filtroEmpleadoPendientes = '';
   
+  // Filtros para HISTORIAL GLOBAL
   filtroNombreHistorial = '';
   filtroEstadoHistorial = '';
   filtroFechaInicioHistorial = '';
   filtroFechaFinHistorial = '';
+  filtroRolHistorial = '';
+  filtroEmpleadoHistorial = '';
   
   nuevaSolicitud = {
     tipo: 'vacaciones',
@@ -45,8 +55,8 @@ export class SolicitudesComponent implements OnInit {
   };
 
   tieneConflictos = false;
-  conflictosPropiosDetectados: any[] = [];
-  conflictosGlobalesDetectados: any[] = [];
+  mensajeConflictos = '';
+  conflictosDetectados: any[] = [];
   mostrarConfirmacionConflictos = false;
 
   solicitudEditando: SolicitudResponse | null = null;
@@ -77,10 +87,21 @@ export class SolicitudesComponent implements OnInit {
     });
 
     this.cargarDatos();
+    if (this.esJefe()) {
+      this.cargarTodosEmpleados();
+    }
+  }
+
+  esAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  esSupervisor(): boolean {
+    return this.authService.isSupervisor();
   }
 
   esJefe(): boolean {
-    return this.authService.isAdmin() || this.authService.isSupervisor();
+    return this.esAdmin() || this.esSupervisor();
   }
 
   cargarDatos() {
@@ -89,6 +110,22 @@ export class SolicitudesComponent implements OnInit {
       this.cargarPendientes();
       this.cargarHistorialGlobal();
     }
+  }
+
+  cargarTodosEmpleados() {
+    this.empleadosService.getEmpleados().subscribe({
+      next: (data) => {
+        this.todosEmpleados = data;
+        // Configurar filtro por defecto según el rol
+        if (this.esAdmin()) {
+          this.filtroRolPendientes = 'supervisor'; // Admin ve supervisores por defecto
+          this.filtroRolHistorial = 'supervisor';
+        } else if (this.esSupervisor()) {
+          this.filtroRolPendientes = 'tecnico'; // Supervisores ven técnicos por defecto
+          this.filtroRolHistorial = 'tecnico';
+        }
+      }
+    });
   }
 
   cargarMisSolicitudes() {
@@ -104,13 +141,17 @@ export class SolicitudesComponent implements OnInit {
 
   cargarPendientes() {
     this.solicitudesService.getPendientes().subscribe({
-      next: (data) => this.solicitudesPendientes = data
+      next: (data) => {
+        this.solicitudesPendientes = data;
+      }
     });
   }
 
   cargarHistorialGlobal() {
     this.solicitudesService.getHistorial().subscribe({
-      next: (data) => this.historialGlobal = data
+      next: (data) => {
+        this.historialGlobal = data;
+      }
     });
   }
 
@@ -127,39 +168,32 @@ export class SolicitudesComponent implements OnInit {
 
     this.isLoading = true;
     
-    this.solicitudesService.verificarConflictosCompletos(
+    // VERIFICAR CONFLICTOS POR ROL (NUEVA IMPLEMENTACIÓN)
+    this.solicitudesService.verificarConflictosPorRol(
       this.currentUser.id,
+      this.currentUser.rol,
       this.nuevaSolicitud.fechaInicio,
       this.nuevaSolicitud.fechaFin
     ).subscribe({
       next: (response) => {
-        if (response.tieneConflictosTotales) {
+        if (response.tieneConflictos) {
+          // HAY CONFLICTO: Mostrar alerta informativa
           this.tieneConflictos = true;
-          this.conflictosPropiosDetectados = response.conflictosPropios || [];
-          this.conflictosGlobalesDetectados = response.conflictosGlobales || [];
-          this.mostrarConfirmacionConflictos = true;
-          this.isLoading = false;
-        } else {
-          this.enviarSolicitud();
+          this.mensajeConflictos = response.mensaje;
+          this.conflictosDetectados = response.conflictos || [];
+          
+          // Mostrar alerta informativa (no bloqueante)
+          alert(this.mensajeConflictos);
         }
+        // EN TODOS LOS CASOS (con o sin conflicto) se envía la solicitud
+        this.enviarSolicitud();
       },
       error: (err) => {
         console.error('Error verificando conflictos:', err);
+        // Si hay error en la verificación, igual se envía la solicitud
         this.enviarSolicitud();
       }
     });
-  }
-
-  confirmarSolicitudConConflictos() {
-    this.mostrarConfirmacionConflictos = false;
-    this.enviarSolicitud();
-  }
-
-  cancelarSolicitudConConflictos() {
-    this.mostrarConfirmacionConflictos = false;
-    this.tieneConflictos = false;
-    this.conflictosPropiosDetectados = [];
-    this.conflictosGlobalesDetectados = [];
   }
 
   private enviarSolicitud() {
@@ -175,8 +209,8 @@ export class SolicitudesComponent implements OnInit {
         this.limpiarFormulario();
         if (this.activeTab === 'crear') this.activeTab = 'mis-solicitudes';
         this.tieneConflictos = false;
-        this.conflictosPropiosDetectados = [];
-        this.conflictosGlobalesDetectados = [];
+        this.mensajeConflictos = '';
+        this.conflictosDetectados = [];
         setTimeout(() => this.mensaje = '', 3000);
         this.isLoading = false;
       },
@@ -219,31 +253,24 @@ export class SolicitudesComponent implements OnInit {
 
     this.isLoading = true;
     
-    this.solicitudesService.verificarConflictosCompletos(
+    // Verificar conflictos por rol antes de editar
+    this.solicitudesService.verificarConflictosPorRol(
       this.currentUser.id,
+      this.currentUser.rol,
       this.editandoSolicitud.fechaInicio,
       this.editandoSolicitud.fechaFin
     ).subscribe({
       next: (response) => {
-        const conflictosPropios = response.conflictosPropios.filter((c: any) => c.id !== this.editandoSolicitud.id);
-        const conflictosGlobales = response.conflictosGlobales;
-        const conflictosTotales = conflictosPropios.length + conflictosGlobales.length;
-        
-        if (conflictosTotales > 0) {
-          let mensaje = 'Se detectaron conflictos con otras solicitudes:\n';
-          if (conflictosPropios.length > 0) {
-            mensaje += `• ${conflictosPropios.length} conflicto(s) con tus propias solicitudes\n`;
-          }
-          if (conflictosGlobales.length > 0) {
-            mensaje += `• ${conflictosGlobales.length} conflicto(s) con solicitudes de otros empleados\n`;
-          }
-          mensaje += '\n¿Deseas continuar?';
+        if (response.tieneConflictos) {
+          // Filtrar para excluir la solicitud actual de los conflictos
+          const conflictosFiltrados = response.conflictos.filter((c: any) => c.id !== this.editandoSolicitud.id);
           
-          if (!confirm(mensaje)) {
-            this.isLoading = false;
-            return;
+          if (conflictosFiltrados.length > 0) {
+            // Mostrar alerta informativa
+            alert(response.mensaje);
           }
         }
+        // Siempro proceder con la actualización
         this.actualizarSolicitud();
       },
       error: () => this.actualizarSolicitud()
@@ -258,8 +285,12 @@ export class SolicitudesComponent implements OnInit {
       motivo: this.editandoSolicitud.motivo
     };
 
-    if (this.esJefe()) {
-      payload.estado = this.editandoSolicitud.estado;
+    if (this.esJefe() && this.editandoSolicitud.id) {
+      // Solo jefes pueden cambiar el estado de solicitudes que no son suyas
+      const esMiSolicitud = this.misSolicitudes.some(s => s.id === this.editandoSolicitud.id);
+      if (!esMiSolicitud) {
+        payload.estado = this.editandoSolicitud.estado;
+      }
     }
 
     this.solicitudesService.editarSolicitud(this.editandoSolicitud.id, payload).subscribe({
@@ -289,13 +320,13 @@ export class SolicitudesComponent implements OnInit {
       estado: 'pendiente'
     };
     this.tieneConflictos = false;
-    this.conflictosPropiosDetectados = [];
-    this.conflictosGlobalesDetectados = [];
-    this.mostrarConfirmacionConflictos = false;
+    this.mensajeConflictos = '';
+    this.conflictosDetectados = [];
     this.limpiarFormulario();
     this.activeTab = this.esJefe() ? 'aprobar' : 'mis-solicitudes';
   }
 
+  // GETTERS FILTRADOS
   get misSolicitudesFiltradas() {
     return this.misSolicitudes.filter(sol => {
       let matchEstado = true;
@@ -323,6 +354,8 @@ export class SolicitudesComponent implements OnInit {
     return this.solicitudesPendientes.filter(sol => {
       let matchTipo = true;
       let matchFecha = true;
+      let matchRol = true;
+      let matchEmpleado = true;
 
       if (this.filtroTipoPendientes) {
         matchTipo = sol.tipo === this.filtroTipoPendientes;
@@ -336,7 +369,20 @@ export class SolicitudesComponent implements OnInit {
         matchFecha = matchFecha && sol.fechaInicio <= this.filtroFechaFinPendientes;
       }
 
-      return matchTipo && matchFecha;
+      // Filtro por rol
+      if (this.filtroRolPendientes) {
+        const empleado = this.todosEmpleados.find(e => e.id === sol.empleadoId);
+        if (empleado) {
+          matchRol = empleado.rol === this.filtroRolPendientes;
+        }
+      }
+
+      // Filtro por empleado específico
+      if (this.filtroEmpleadoPendientes) {
+        matchEmpleado = sol.empleadoNombre.toLowerCase().includes(this.filtroEmpleadoPendientes.toLowerCase());
+      }
+
+      return matchTipo && matchFecha && matchRol && matchEmpleado;
     });
   }
 
@@ -347,6 +393,8 @@ export class SolicitudesComponent implements OnInit {
       let matchNombre = true;
       let matchEstado = true;
       let matchFecha = true;
+      let matchRol = true;
+      let matchEmpleado = true;
 
       if (this.filtroNombreHistorial) {
         matchNombre = sol.empleadoNombre.toLowerCase().includes(this.filtroNombreHistorial.toLowerCase());
@@ -364,8 +412,34 @@ export class SolicitudesComponent implements OnInit {
         matchFecha = matchFecha && sol.fechaInicio <= this.filtroFechaFinHistorial;
       }
 
-      return matchNombre && matchEstado && matchFecha;
+      // Filtro por rol
+      if (this.filtroRolHistorial) {
+        const empleado = this.todosEmpleados.find(e => e.id === sol.empleadoId);
+        if (empleado) {
+          matchRol = empleado.rol === this.filtroRolHistorial;
+        }
+      }
+
+      // Filtro por empleado específico
+      if (this.filtroEmpleadoHistorial) {
+        matchEmpleado = sol.empleadoNombre.toLowerCase().includes(this.filtroEmpleadoHistorial.toLowerCase());
+      }
+
+      return matchNombre && matchEstado && matchFecha && matchRol && matchEmpleado;
     });
+  }
+
+  get empleadosFiltrados() {
+    if (!this.esJefe()) return [];
+    
+    let empleados = this.todosEmpleados;
+    
+    // Filtrar por rol si está seleccionado
+    if (this.filtroRolPendientes) {
+      empleados = empleados.filter(e => e.rol === this.filtroRolPendientes);
+    }
+    
+    return empleados;
   }
 
   validarFechasFiltro() {
@@ -396,12 +470,30 @@ export class SolicitudesComponent implements OnInit {
         this.filtroTipoPendientes = '';
         this.filtroFechaInicioPendientes = '';
         this.filtroFechaFinPendientes = '';
+        this.filtroEmpleadoPendientes = '';
+        // Restaurar filtro por defecto según rol
+        if (this.esAdmin()) {
+          this.filtroRolPendientes = 'supervisor';
+        } else if (this.esSupervisor()) {
+          this.filtroRolPendientes = 'tecnico';
+        } else {
+          this.filtroRolPendientes = '';
+        }
         break;
       case 'historial':
         this.filtroNombreHistorial = '';
         this.filtroEstadoHistorial = '';
         this.filtroFechaInicioHistorial = '';
         this.filtroFechaFinHistorial = '';
+        this.filtroEmpleadoHistorial = '';
+        // Restaurar filtro por defecto según rol
+        if (this.esAdmin()) {
+          this.filtroRolHistorial = 'supervisor';
+        } else if (this.esSupervisor()) {
+          this.filtroRolHistorial = 'tecnico';
+        } else {
+          this.filtroRolHistorial = '';
+        }
         break;
     }
   }
@@ -460,6 +552,7 @@ export class SolicitudesComponent implements OnInit {
       return [
         { header: 'ID', dataKey: 'id' },
         { header: 'Empleado', dataKey: 'empleadoNombre' },
+        { header: 'Rol', dataKey: 'rol' },
         { header: 'Tipo', dataKey: 'tipo' },
         { header: 'Fecha Inicio', dataKey: 'fechaInicio' },
         { header: 'Fecha Fin', dataKey: 'fechaFin' },
@@ -471,6 +564,7 @@ export class SolicitudesComponent implements OnInit {
       return [
         { header: 'ID', dataKey: 'id' },
         { header: 'Empleado', dataKey: 'empleadoNombre' },
+        { header: 'Rol', dataKey: 'rol' },
         { header: 'Tipo', dataKey: 'tipo' },
         { header: 'Fecha Inicio', dataKey: 'fechaInicio' },
         { header: 'Fecha Fin', dataKey: 'fechaFin' },
@@ -500,19 +594,23 @@ export class SolicitudesComponent implements OnInit {
         datosOriginales = [];
     }
     
-    return datosOriginales.map(sol => ({
-      id: sol.id || '',
-      empleadoNombre: sol.empleadoNombre || '',
-      tipo: sol.tipo || '',
-      fechaInicio: this.formatearFecha(sol.fechaInicio || ''),
-      fechaFin: this.formatearFecha(sol.fechaFin || ''),
-      dias: this.calcularDias(sol.fechaInicio || '', sol.fechaFin || ''),
-      estado: sol.estado || '',
-      aprobadoPor: sol.aprobadoPor || (sol.nombreAprobador || 'Pendiente'),
-      fechaSolicitud: this.formatearFechaHora(sol.fechaSolicitud || ''),
-      fechaAprobacion: this.formatearFechaHora(sol.fechaAprobacion || ''),
-      motivo: sol.motivo || ''
-    }));
+    return datosOriginales.map(sol => {
+      const empleado = this.todosEmpleados.find(e => e.id === sol.empleadoId);
+      return {
+        id: sol.id || '',
+        empleadoNombre: sol.empleadoNombre || '',
+        rol: empleado?.rol || '',
+        tipo: sol.tipo || '',
+        fechaInicio: this.formatearFecha(sol.fechaInicio || ''),
+        fechaFin: this.formatearFecha(sol.fechaFin || ''),
+        dias: this.calcularDias(sol.fechaInicio || '', sol.fechaFin || ''),
+        estado: sol.estado || '',
+        aprobadoPor: sol.aprobadoPor || (sol.nombreAprobador || 'Pendiente'),
+        fechaSolicitud: this.formatearFechaHora(sol.fechaSolicitud || ''),
+        fechaAprobacion: this.formatearFechaHora(sol.fechaAprobacion || ''),
+        motivo: sol.motivo || ''
+      };
+    });
   }
 
   private getNombreArchivoExportacion(): string {
@@ -596,8 +694,8 @@ export class SolicitudesComponent implements OnInit {
       motivo: ''
     };
     this.tieneConflictos = false;
-    this.conflictosPropiosDetectados = [];
-    this.conflictosGlobalesDetectados = [];
+    this.mensajeConflictos = '';
+    this.conflictosDetectados = [];
     this.mostrarConfirmacionConflictos = false;
   }
 
@@ -608,6 +706,17 @@ export class SolicitudesComponent implements OnInit {
       case 'aprobado': return 'bg-success';
       case 'rechazado': return 'bg-danger';
       case 'pendiente': return 'bg-warning text-dark';
+      default: return 'bg-secondary';
+    }
+  }
+
+  getRolClass(rol: string): string {
+    if (!rol) return 'bg-secondary';
+    
+    switch (rol.toLowerCase()) {
+      case 'admin': return 'bg-dark text-white';
+      case 'supervisor': return 'bg-primary text-white';
+      case 'tecnico': return 'bg-info text-white';
       default: return 'bg-secondary';
     }
   }
@@ -623,5 +732,18 @@ export class SolicitudesComponent implements OnInit {
 
   formatFechaHora(fechaHora: string): string {
     return this.formatearFechaHora(fechaHora);
+  }
+
+  obtenerRolEmpleado(empleadoId: number): string {
+    if (!this.todosEmpleados || this.todosEmpleados.length === 0) {
+      return '';
+    }
+    
+    const empleado = this.todosEmpleados.find(e => e.id === empleadoId);
+    return empleado?.rol || '';
+  }
+
+  get todosEmpleadosFiltrados() {
+    return this.todosEmpleados || [];
   }
 }
