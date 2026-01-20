@@ -271,6 +271,8 @@ export class EmpleadosComponent implements OnInit {
     const payload: any = {};
     const original = this.empleadoOriginal;
 
+    // 🔥 NUEVA LÓGICA: Solo enviar campos que realmente cambiaron
+    
     if (formValue.nombre.trim() !== original.nombre) {
       payload.nombre = formValue.nombre.trim();
     }
@@ -283,9 +285,12 @@ export class EmpleadosComponent implements OnInit {
       payload.nivel = formValue.nivel;
     }
 
-    if (formValue.rol !== original.rol) {
+    // 🔥 CRÍTICO: NO enviar rol si no es admin o si no cambió
+    // Solo Admin puede cambiar roles explícitamente
+    if (formValue.rol !== original.rol && this.authService.isAdmin()) {
       payload.rol = formValue.rol;
     }
+    // Si no es admin, NO enviar rol (el backend lo preservará)
 
     if (formValue.usuarioActivo !== original.usuarioActivo) {
       payload.usuarioActivo = formValue.usuarioActivo;
@@ -327,6 +332,15 @@ export class EmpleadosComponent implements OnInit {
     const password = formValue.password?.trim();
     if (password && password.length >= 6) {
       payload.password = password;
+    }
+
+    // 🔥 CRÍTICO: NO enviar foto si no cambió o es la por defecto
+    // La imagen se maneja por separado con ImageController
+    // NO enviar "img/perfil.png" automáticamente
+    if (formValue.foto && 
+        formValue.foto !== 'img/perfil.png' && 
+        formValue.foto !== original.foto) {
+      payload.foto = formValue.foto;
     }
 
     return payload;
@@ -452,6 +466,8 @@ export class EmpleadosComponent implements OnInit {
     
     if (this.fotoActual && this.fotoActual !== 'img/perfil.png') {
       this.fotoPreview = this.getFotoUrl(this.fotoActual, emp.nombre);
+    } else {
+      this.fotoPreview = this.getAvatarPlaceholder(emp.nombre);
     }
 
     this.empForm.patchValue({
@@ -603,7 +619,7 @@ export class EmpleadosComponent implements OnInit {
       };
       reader.readAsDataURL(file);
 
-      this.empForm.patchValue({ foto: 'temp_upload' });
+      // No actualizar el campo foto en el form (se maneja por separado)
       
       this.empForm.markAsDirty();
       this.checkFormChanges();
@@ -618,7 +634,6 @@ export class EmpleadosComponent implements OnInit {
     this.fotoPreview = this.fotoActual ? 
       this.getFotoUrl(this.fotoActual, this.empForm.get('nombre')?.value) : 
       this.getAvatarPlaceholder(this.empForm.get('nombre')?.value);
-    this.empForm.patchValue({ foto: this.fotoActual || 'img/perfil.png' });
     this.checkFormChanges();
   }
 
