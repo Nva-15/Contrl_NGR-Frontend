@@ -66,4 +66,8 @@ export class EmpleadosService {
   actualizarEmail(id: number, email: string): Observable<any> {
     return this.http.put(`${this.apiUrl}/actualizar-email/${id}`, { email });
   }
+  // Método en la clase EmpleadosService (en empleados.ts)
+  getCumpleanosSemanales(): Observable<EmpleadoResponse[]> {
+    return this.http.get<EmpleadoResponse[]>(`${this.apiUrl}/cumpleanos/semana`);
+  }
 }
