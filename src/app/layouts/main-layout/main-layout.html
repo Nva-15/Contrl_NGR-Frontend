@@ -1,12 +1,14 @@
 <div class="container-fluid vh-100">
   <div class="row h-100">
     
-    <nav class="col-md-3 col-lg-2 d-none d-md-flex flex-column bg-primary sidebar p-0">
+    <nav class="col-md-3 col-lg-2 d-none d-md-flex flex-column bg-ngr sidebar p-0">
       
       <div class="text-center pt-4 pb-3">
-        <i class="bi bi-clock-history text-white display-4"></i>
-        <h5 class="text-white mt-2 mb-0 fw-bold">Control NGR</h5>
-        <small class="text-white-50">Sistema de Asistencia</small>
+        <img src="http://localhost:8080/img/Logo.PNG"
+             alt="Control NGR"
+             class="img-fluid mb-2"
+             style="max-height: 80px;">
+        <small class="text-white-50 d-block">Sistema de Asistencia</small>
       </div>
 
       <hr class="text-white-50 my-0 mx-3">
@@ -90,10 +92,11 @@
 
     <main class="col-md-9 ms-sm-auto col-lg-10 px-0 bg-light h-100 overflow-auto">
       
-      <div class="d-md-none bg-primary p-3 text-white d-flex justify-content-between align-items-center sticky-top shadow-sm">
-        <span class="fw-bold">
-          <i class="bi bi-clock-history me-2"></i>Control NGR
-        </span>
+      <div class="d-md-none bg-ngr-header p-3 text-white d-flex justify-content-between align-items-center sticky-top shadow-sm">
+        <img src="http://localhost:8080/img/Logo.PNG"
+             alt="Control NGR"
+             height="35"
+             class="d-inline-block">
         <a class="btn btn-outline-light btn-sm" routerLink="/dashboard">
           <i class="bi bi-house-door"></i>
         </a>

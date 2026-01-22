@@ -1,9 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth';
 import { AsistenciaService } from '../../services/asistencia';
+import { EmpleadosService } from '../../services/empleados';
 
 @Component({
   selector: 'app-dashboard',
@@ -13,19 +15,41 @@ import { AsistenciaService } from '../../services/asistencia';
   styleUrls: ['./dashboard.css']
 })
 export class DashboardComponent implements OnInit {
+  @ViewChild('fileInputModal') fileInputModal!: ElementRef;
+
   private auth = inject(AuthService);
   private asistenciaService = inject(AsistenciaService);
+  private empleadosService = inject(EmpleadosService);
+  private http = inject(HttpClient);
   private router = inject(Router);
 
   currentEmpleado: any;
   fotoUrl: string = '';
-  
+
   fechaActual = new Date();
   asistenciaHoy: any = null;
   isLoading = true;
-  
+
   tipoMarcaje: 'entrada' | 'salida' = 'entrada';
   observaciones = '';
+
+  // Modal de actualización de datos
+  mostrarModalPerfil = false;
+  isUpdating = false;
+  mensajeModal = '';
+  mensajeErrorModal = '';
+
+  // Campos editables del modal
+  descripcionEdit = '';
+  hobbyEdit = '';
+  fotoPreviewModal: string | null = null;
+  fotoFileModal: File | null = null;
+
+  // Cambio de contraseña
+  mostrarSeccionPassword = false;
+  passwordActual = '';
+  passwordNueva = '';
+  passwordConfirmar = '';
 
   ngOnInit() {
     this.currentEmpleado = this.auth.getCurrentEmpleado();
@@ -165,5 +189,198 @@ export class DashboardComponent implements OnInit {
 
   getRolDisplayName(): string {
     return this.auth.getRolDisplayName();
+  }
+
+  // ========== MODAL DE PERFIL ==========
+
+  abrirModalPerfil() {
+    this.descripcionEdit = this.currentEmpleado?.descripcion || '';
+    this.hobbyEdit = this.currentEmpleado?.hobby || '';
+    this.fotoPreviewModal = null;
+    this.fotoFileModal = null;
+    this.mostrarSeccionPassword = false;
+    this.passwordActual = '';
+    this.passwordNueva = '';
+    this.passwordConfirmar = '';
+    this.mensajeModal = '';
+    this.mensajeErrorModal = '';
+    this.mostrarModalPerfil = true;
+  }
+
+  cerrarModalPerfil() {
+    this.mostrarModalPerfil = false;
+    this.fotoPreviewModal = null;
+    this.fotoFileModal = null;
+    if (this.fileInputModal) {
+      this.fileInputModal.nativeElement.value = '';
+    }
+  }
+
+  onFileSelectedModal(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        this.mostrarErrorModal('Solo se permiten imágenes (JPEG, PNG, GIF)');
+        event.target.value = '';
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        this.mostrarErrorModal('La imagen no debe superar los 5MB');
+        event.target.value = '';
+        return;
+      }
+
+      this.fotoFileModal = file;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.fotoPreviewModal = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  cancelarFotoModal() {
+    this.fotoPreviewModal = null;
+    this.fotoFileModal = null;
+    if (this.fileInputModal) {
+      this.fileInputModal.nativeElement.value = '';
+    }
+  }
+
+  guardarDatosPersonales() {
+    if (!this.currentEmpleado?.id) return;
+
+    this.isUpdating = true;
+    this.mensajeErrorModal = '';
+
+    const datos = {
+      descripcion: this.descripcionEdit.trim(),
+      hobby: this.hobbyEdit.trim()
+    };
+
+    // Usar endpoint de auth que está disponible para todos los usuarios
+    this.http.put('http://localhost:8080/api/auth/perfil/actualizar', datos, {
+      headers: { 'Authorization': `Bearer ${this.auth.getToken()}` }
+    }).subscribe({
+      next: () => {
+        this.currentEmpleado.descripcion = this.descripcionEdit.trim();
+        this.currentEmpleado.hobby = this.hobbyEdit.trim();
+        localStorage.setItem('currentEmpleado', JSON.stringify(this.currentEmpleado));
+        this.mostrarMensajeModal('Datos actualizados correctamente');
+        this.isUpdating = false;
+      },
+      error: (e: any) => {
+        this.mostrarErrorModal(e.error?.error || 'Error al actualizar datos');
+        this.isUpdating = false;
+      }
+    });
+  }
+
+  guardarFoto() {
+    if (!this.currentEmpleado?.id || !this.fotoFileModal) return;
+
+    this.isUpdating = true;
+    this.mensajeErrorModal = '';
+
+    const formData = new FormData();
+    formData.append('archivo', this.fotoFileModal);
+
+    this.http.post(`http://localhost:8080/api/imagenes/upload/${this.currentEmpleado.id}`, formData, {
+      headers: { 'Authorization': `Bearer ${this.auth.getToken()}` }
+    }).subscribe({
+      next: (response: any) => {
+        if (response.success && response.ruta) {
+          this.currentEmpleado.foto = response.ruta;
+          localStorage.setItem('currentEmpleado', JSON.stringify(this.currentEmpleado));
+          this.fotoUrl = this.getFotoUrl(response.ruta, this.currentEmpleado.nombre);
+          this.mostrarMensajeModal('Foto actualizada correctamente');
+          this.cancelarFotoModal();
+        }
+        this.isUpdating = false;
+      },
+      error: (e) => {
+        this.mostrarErrorModal(e.error?.error || 'Error al subir la imagen');
+        this.isUpdating = false;
+      }
+    });
+  }
+
+  cambiarPassword() {
+    if (!this.currentEmpleado?.username) return;
+
+    if (!this.passwordActual || !this.passwordNueva || !this.passwordConfirmar) {
+      this.mostrarErrorModal('Todos los campos de contraseña son requeridos');
+      return;
+    }
+
+    if (this.passwordNueva.length < 6) {
+      this.mostrarErrorModal('La nueva contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (this.passwordNueva !== this.passwordConfirmar) {
+      this.mostrarErrorModal('Las contraseñas no coinciden');
+      return;
+    }
+
+    this.isUpdating = true;
+    this.mensajeErrorModal = '';
+
+    this.auth.cambiarPassword(
+      this.currentEmpleado.username,
+      this.passwordActual,
+      this.passwordNueva
+    ).subscribe({
+      next: () => {
+        this.mostrarMensajeModal('Contraseña cambiada exitosamente');
+        this.passwordActual = '';
+        this.passwordNueva = '';
+        this.passwordConfirmar = '';
+        this.mostrarSeccionPassword = false;
+        this.isUpdating = false;
+      },
+      error: (e) => {
+        this.mostrarErrorModal(e.error?.error || 'Error al cambiar contraseña');
+        this.isUpdating = false;
+      }
+    });
+  }
+
+  private mostrarMensajeModal(msg: string) {
+    this.mensajeModal = msg;
+    this.mensajeErrorModal = '';
+    setTimeout(() => this.mensajeModal = '', 4000);
+  }
+
+  private mostrarErrorModal(msg: string) {
+    this.mensajeErrorModal = msg;
+    this.mensajeModal = '';
+    setTimeout(() => this.mensajeErrorModal = '', 5000);
+  }
+
+  getNivelDisplay(nivel: string): string {
+    switch (nivel?.toLowerCase()) {
+      case 'jefe': return 'Jefe/Gerente';
+      case 'supervisor': return 'Supervisor';
+      case 'tecnico': return 'Técnico';
+      case 'hd': return 'HD';
+      case 'bo': return 'Back Office';
+      case 'noc': return 'NOC';
+      default: return nivel || 'Sin nivel';
+    }
+  }
+
+  getRolDisplay(rol: string): string {
+    switch (rol?.toLowerCase()) {
+      case 'admin': return 'Administrador';
+      case 'supervisor': return 'Supervisor';
+      case 'tecnico': return 'Técnico';
+      case 'hd': return 'HD';
+      case 'noc': return 'NOC';
+      default: return rol || 'Sin rol';
+    }
   }
 }

@@ -23,6 +23,16 @@
 .navbar { padding: 0.75rem 0; }
 .navbar-brand { font-size: 1.4rem; }
 
+/* Navbar personalizado con colores del logo */
+.navbar-ngr {
+  background: linear-gradient(135deg, #3D3532 0%, #2A2421 100%);
+}
+
+.navbar-ngr .dropdown-toggle:hover {
+  background-color: rgba(227, 168, 87, 0.2);
+  border-radius: 8px;
+}
+
 /* Tarjetas */
 .card {
   border-radius: 12px;

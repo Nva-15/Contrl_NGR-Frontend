@@ -1,9 +1,12 @@
 <div class="container-fluid">
   
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow fixed-top">
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-ngr shadow fixed-top">
     <div class="container-fluid">
       <a class="navbar-brand fw-bold" href="#">
-        <i class="bi bi-clock-history me-2"></i>Control NGR
+        <img src="http://localhost:8080/img/Logo.PNG"
+             alt="Control NGR"
+             height="40"
+             class="d-inline-block align-middle">
       </a>
       
       <div class="navbar-nav ms-auto">
@@ -133,7 +136,7 @@
                 </div>
 
                 <div class="mt-4">
-                  <button class="btn btn-outline-info w-100 rounded-pill">
+                  <button class="btn btn-outline-info w-100 rounded-pill" (click)="abrirModalPerfil()">
                     <i class="bi bi-pencil-square me-2"></i>Actualizar Datos
                   </button>
                 </div>
@@ -175,7 +178,15 @@
                   <small class="text-muted" style="font-size:0.75rem">Mis registros</small>
                 </div>
               </a>
-              
+
+              <a routerLink="/organigrama" class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center">
+                <i class="bi bi-diagram-3 text-success fs-4 me-3"></i>
+                <div class="lh-1">
+                  <h6 class="mb-0">Organigrama</h6>
+                  <small class="text-muted" style="font-size:0.75rem">Estructura empresa</small>
+                </div>
+              </a>
+
               <a *ngIf="isAdmin() || isSupervisor()" 
                  routerLink="/empleados" 
                  class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center bg-danger bg-opacity-10">
@@ -267,4 +278,211 @@
       </div>
     </div>
   </footer>
+
+  <!-- Modal de Actualización de Perfil -->
+  <div class="modal fade show"
+       [class.d-block]="mostrarModalPerfil"
+       [style.display]="mostrarModalPerfil ? 'block' : 'none'"
+       tabindex="-1"
+       *ngIf="mostrarModalPerfil">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+
+        <!-- Header -->
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, #3D3532 0%, #2A2421 100%);">
+          <h5 class="modal-title">
+            <i class="bi bi-person-gear me-2"></i>Mi Perfil
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="cerrarModalPerfil()" [disabled]="isUpdating"></button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+
+          <!-- Mensajes -->
+          <div *ngIf="mensajeModal" class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i>{{ mensajeModal }}
+            <button type="button" class="btn-close" (click)="mensajeModal = ''"></button>
+          </div>
+          <div *ngIf="mensajeErrorModal" class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>{{ mensajeErrorModal }}
+            <button type="button" class="btn-close" (click)="mensajeErrorModal = ''"></button>
+          </div>
+
+          <!-- Foto y Datos Básicos -->
+          <div class="text-center mb-4">
+            <img [src]="fotoPreviewModal || fotoUrl"
+                 class="rounded-circle border border-3 shadow mb-3"
+                 style="width: 120px; height: 120px; object-fit: cover;"
+                 (error)="onImageError($event)"
+                 alt="Foto de perfil">
+            <h4 class="mb-1">{{ currentEmpleado?.nombre }}</h4>
+            <span class="badge bg-secondary">{{ getRolDisplay(currentEmpleado?.rol) }}</span>
+          </div>
+
+          <!-- Información de Solo Lectura -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Información Personal</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label text-muted small mb-0">DNI</label>
+                  <p class="fw-bold mb-2">{{ currentEmpleado?.dni }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label text-muted small mb-0">Usuario</label>
+                  <p class="fw-bold mb-2">{{ currentEmpleado?.username }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label text-muted small mb-0">Cargo</label>
+                  <p class="fw-bold mb-2">{{ currentEmpleado?.cargo || 'Sin cargo' }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label text-muted small mb-0">Nivel</label>
+                  <p class="fw-bold mb-2">{{ getNivelDisplay(currentEmpleado?.nivel) }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label text-muted small mb-0">Email</label>
+                  <p class="fw-bold mb-2">{{ currentEmpleado?.email || 'Sin email' }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label text-muted small mb-0">Fecha Ingreso</label>
+                  <p class="fw-bold mb-2">{{ currentEmpleado?.ingreso | date:'dd/MM/yyyy' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Editar Descripción y Hobby -->
+          <div class="card mb-4">
+            <div class="card-header bg-info bg-opacity-10">
+              <h6 class="mb-0 text-info"><i class="bi bi-pencil me-2"></i>Datos Personales</h6>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Hobby / Pasatiempo</label>
+                <input type="text"
+                       class="form-control"
+                       [(ngModel)]="hobbyEdit"
+                       placeholder="Ej: Fútbol, Música, Lectura..."
+                       maxlength="255">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-bold">Descripción</label>
+                <textarea class="form-control"
+                          rows="3"
+                          [(ngModel)]="descripcionEdit"
+                          placeholder="Escribe una breve descripción sobre ti..."
+                          maxlength="500"></textarea>
+                <small class="text-muted">{{ descripcionEdit.length }}/500 caracteres</small>
+              </div>
+              <div class="text-end">
+                <button class="btn btn-info"
+                        (click)="guardarDatosPersonales()"
+                        [disabled]="isUpdating">
+                  <span *ngIf="isUpdating" class="spinner-border spinner-border-sm me-1"></span>
+                  <i class="bi bi-check-lg me-1" *ngIf="!isUpdating"></i>Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Cambiar Foto -->
+          <div class="card mb-4">
+            <div class="card-header bg-success bg-opacity-10">
+              <h6 class="mb-0 text-success"><i class="bi bi-camera me-2"></i>Cambiar Foto</h6>
+            </div>
+            <div class="card-body">
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <input type="file"
+                         class="form-control mb-2"
+                         accept=".jpg,.jpeg,.png,.gif"
+                         (change)="onFileSelectedModal($event)"
+                         #fileInputModal>
+                  <small class="text-muted">Formatos: JPG, PNG, GIF (máx. 5MB)</small>
+                </div>
+                <div class="col-md-4 text-end">
+                  <button class="btn btn-outline-secondary btn-sm me-2"
+                          (click)="cancelarFotoModal()"
+                          *ngIf="fotoFileModal"
+                          [disabled]="isUpdating">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                  <button class="btn btn-success btn-sm"
+                          (click)="guardarFoto()"
+                          [disabled]="!fotoFileModal || isUpdating">
+                    <span *ngIf="isUpdating" class="spinner-border spinner-border-sm me-1"></span>
+                    <i class="bi bi-upload me-1" *ngIf="!isUpdating"></i>Subir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Cambiar Contraseña -->
+          <div class="card">
+            <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+              <h6 class="mb-0 text-warning"><i class="bi bi-key me-2"></i>Cambiar Contraseña</h6>
+              <button class="btn btn-sm"
+                      [class.btn-outline-warning]="!mostrarSeccionPassword"
+                      [class.btn-warning]="mostrarSeccionPassword"
+                      (click)="mostrarSeccionPassword = !mostrarSeccionPassword">
+                <i class="bi" [class.bi-chevron-down]="!mostrarSeccionPassword" [class.bi-chevron-up]="mostrarSeccionPassword"></i>
+              </button>
+            </div>
+            <div class="card-body" *ngIf="mostrarSeccionPassword">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Contraseña Actual</label>
+                  <input type="password"
+                         class="form-control"
+                         [(ngModel)]="passwordActual"
+                         placeholder="Ingrese su contraseña actual">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Nueva Contraseña</label>
+                  <input type="password"
+                         class="form-control"
+                         [(ngModel)]="passwordNueva"
+                         placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Confirmar Contraseña</label>
+                  <input type="password"
+                         class="form-control"
+                         [(ngModel)]="passwordConfirmar"
+                         placeholder="Repita la nueva contraseña"
+                         [class.is-invalid]="passwordConfirmar && passwordNueva !== passwordConfirmar">
+                  <div class="invalid-feedback">Las contraseñas no coinciden</div>
+                </div>
+                <div class="col-12 text-end">
+                  <button class="btn btn-warning"
+                          (click)="cambiarPassword()"
+                          [disabled]="isUpdating || !passwordActual || !passwordNueva || !passwordConfirmar">
+                    <span *ngIf="isUpdating" class="spinner-border spinner-border-sm me-1"></span>
+                    <i class="bi bi-shield-check me-1" *ngIf="!isUpdating"></i>Cambiar Contraseña
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="cerrarModalPerfil()" [disabled]="isUpdating">
+            <i class="bi bi-x-circle me-1"></i>Cerrar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <!-- Backdrop del Modal -->
+  <div class="modal-backdrop fade show" *ngIf="mostrarModalPerfil"></div>
+
 </div>

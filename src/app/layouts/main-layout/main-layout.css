@@ -11,6 +11,15 @@
   box-shadow: 4px 0 10px rgba(0,0,0,0.1);
 }
 
+/* Colores personalizados del logo */
+.bg-ngr {
+  background: linear-gradient(180deg, #3D3532 0%, #2A2421 100%);
+}
+
+.bg-ngr-header {
+  background-color: #3D3532;
+}
+
 /* Enlaces */
 .nav-link {
   padding: 0.8rem 1rem;
