@@ -173,16 +173,17 @@
                 
                 <td>
                   <div class="d-flex flex-column gap-2">
-                    <div class="form-check form-switch mb-0">
-                      <input class="form-check-input" 
-                             type="checkbox" 
+                    <div class="form-check form-switch mb-0" [title]="getTooltipEstado(emp)">
+                      <input class="form-check-input"
+                             type="checkbox"
                              [checked]="emp.usuarioActivo"
                              (change)="cambiarEstado(emp.id!, $event.target.checked)"
-                             [disabled]="!puedeGestionarEmpleados() || isLoading"
+                             [disabled]="!puedeCambiarEstadoEmpleado(emp) || isLoading"
                              [id]="'switch-' + emp.id"
                              (click)="$event.stopPropagation()">
-                      <label class="form-check-label small" 
-                             [for]="'switch-' + emp.id">
+                      <label class="form-check-label small"
+                             [for]="'switch-' + emp.id"
+                             [class.text-muted]="!puedeCambiarEstadoEmpleado(emp)">
                         {{ emp.usuarioActivo ? 'Activo' : 'Inactivo' }}
                       </label>
                     </div>
@@ -215,11 +216,11 @@
                             [disabled]="isLoading || !puedeEditarEmpleado(emp)">
                       <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" 
-                            (click)="eliminar(emp.id!)" 
-                            title="Desactivar usuario"
+                    <button class="btn btn-sm btn-outline-danger"
+                            (click)="eliminar(emp)"
+                            [title]="getTooltipEliminar(emp)"
                             *ngIf="puedeGestionarEmpleados()"
-                            [disabled]="!emp.usuarioActivo || isLoading">
+                            [disabled]="isLoading || !puedeEliminarEmpleado(emp)">
                       <i class="bi bi-trash"></i>
                     </button>
                   </div>
@@ -505,16 +506,24 @@
               <!-- Status Toggle Button -->
               <div class="row mb-4">
                 <div class="col-12">
+                  <!-- Alerta cuando no puede cambiar estado -->
+                  <div *ngIf="isEditing && !puedeCambiarEstadoEnFormulario()" class="alert alert-warning mb-3">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Nota:</strong> No tiene permisos para cambiar el estado de este usuario.
+                  </div>
+
                   <div class="text-center mb-4">
-                    <button type="button" 
+                    <button type="button"
                             class="btn btn-lg px-5 py-3"
                             [ngClass]="{
                               'btn-success': empForm.get('usuarioActivo')?.value,
-                              'btn-secondary': !empForm.get('usuarioActivo')?.value
+                              'btn-secondary': !empForm.get('usuarioActivo')?.value,
+                              'disabled': !puedeCambiarEstadoEnFormulario()
                             }"
-                            [title]="empForm.get('usuarioActivo')?.value ? 'Cambiar a inactivo' : 'Cambiar a activo'"
-                            (click)="empForm.get('usuarioActivo')?.setValue(!empForm.get('usuarioActivo')?.value)">
-                      <i class="bi" 
+                            [disabled]="!puedeCambiarEstadoEnFormulario()"
+                            [title]="puedeCambiarEstadoEnFormulario() ? (empForm.get('usuarioActivo')?.value ? 'Cambiar a inactivo' : 'Cambiar a activo') : 'No tiene permisos para cambiar el estado'"
+                            (click)="puedeCambiarEstadoEnFormulario() && empForm.get('usuarioActivo')?.setValue(!empForm.get('usuarioActivo')?.value)">
+                      <i class="bi"
                          [class.bi-person-check]="empForm.get('usuarioActivo')?.value"
                          [class.bi-person-x]="!empForm.get('usuarioActivo')?.value"></i>
                       {{ empForm.get('usuarioActivo')?.value ? 'USUARIO ACTIVO' : 'USUARIO INACTIVO' }}
@@ -559,13 +568,14 @@
                   </div>
                   
                   <!-- Admin Toggles -->
-                  <div *ngIf="authService.isAdmin()" class="row mt-4">
+                  <div *ngIf="authService.isAdmin() && puedeCambiarEstadoEnFormulario()" class="row mt-4">
                     <div class="col-md-6">
                       <div class="form-check form-switch">
-                        <input class="form-check-input" 
-                               type="checkbox" 
-                               formControlName="usuarioActivo" 
-                               id="usuarioActivo">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               formControlName="usuarioActivo"
+                               id="usuarioActivo"
+                               [disabled]="!puedeCambiarEstadoEnFormulario()">
                         <label class="form-check-label fw-bold" for="usuarioActivo">
                           Usuario Activo
                         </label>
@@ -575,13 +585,14 @@
                         </div>
                       </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                       <div class="form-check form-switch">
-                        <input class="form-check-input" 
-                               type="checkbox" 
-                               formControlName="activo" 
-                               id="activo">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               formControlName="activo"
+                               id="activo"
+                               [disabled]="!puedeCambiarEstadoEnFormulario()">
                         <label class="form-check-label fw-bold" for="activo">
                           Activo en la Empresa
                         </label>
@@ -618,4 +629,72 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Confirmación para Eliminar -->
+  <div class="modal fade show"
+       [class.d-block]="mostrarModalEliminar"
+       [style.display]="mostrarModalEliminar ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog"
+       *ngIf="mostrarModalEliminar">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            Confirmar Eliminación
+          </h5>
+          <button type="button"
+                  class="btn-close btn-close-white"
+                  (click)="cancelarEliminar()"
+                  [disabled]="isLoading">
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-4">
+            <i class="bi bi-person-x-fill text-danger" style="font-size: 4rem;"></i>
+          </div>
+          <p class="text-center fs-5">
+            ¿Está seguro que desea <strong class="text-danger">eliminar permanentemente</strong> a este usuario?
+          </p>
+          <div class="alert alert-warning" *ngIf="empleadoAEliminar">
+            <div class="d-flex align-items-center">
+              <img [src]="getFotoUrl(empleadoAEliminar.foto, empleadoAEliminar.nombre)"
+                   (error)="handleImageError($event, empleadoAEliminar.nombre)"
+                   class="rounded-circle me-3"
+                   style="width: 50px; height: 50px; object-fit: cover;">
+              <div>
+                <strong>{{ empleadoAEliminar.nombre }}</strong><br>
+                <small class="text-muted">DNI: {{ empleadoAEliminar.dni }}</small>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-danger">
+            <i class="bi bi-exclamation-circle me-2"></i>
+            <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+            El usuario y todos sus datos serán eliminados permanentemente de la base de datos.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button"
+                  class="btn btn-secondary"
+                  (click)="cancelarEliminar()"
+                  [disabled]="isLoading">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </button>
+          <button type="button"
+                  class="btn btn-danger"
+                  (click)="confirmarEliminar()"
+                  [disabled]="isLoading">
+            <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="bi bi-trash me-1" *ngIf="!isLoading"></i>
+            Sí, Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Backdrop del Modal -->
+  <div class="modal-backdrop fade show" *ngIf="mostrarModalEliminar"></div>
 </div>

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, inject, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -24,6 +24,7 @@ export class EmpleadosComponent implements OnInit {
   exportService = inject(ExportService);
   http = inject(HttpClient);
   router = inject(Router);
+  cdr = inject(ChangeDetectorRef);
 
   empForm: FormGroup;
   
@@ -43,6 +44,10 @@ export class EmpleadosComponent implements OnInit {
   fotoActual: string | null = null;
 
   fechaHoy = '';
+
+  // Modal de confirmación para eliminar
+  mostrarModalEliminar = false;
+  empleadoAEliminar: EmpleadoResponse | null = null;
 
   roles = [
     { value: 'admin', label: 'Administrador' },
@@ -385,11 +390,11 @@ export class EmpleadosComponent implements OnInit {
 
   getTooltipEdicion(empleado: EmpleadoResponse): string {
     if (this.isLoading) return 'Espere...';
-    
+
     if (!this.puedeEditarEmpleado(empleado)) {
       const userRole = this.authService.getUserRole();
       const empleadoRol = empleado.rol?.toLowerCase();
-      
+
       if (userRole === 'supervisor') {
         if (empleadoRol === 'admin') {
           return 'No puede editar administradores';
@@ -400,8 +405,154 @@ export class EmpleadosComponent implements OnInit {
       }
       return 'No tiene permisos para editar este usuario';
     }
-    
+
     return 'Editar empleado';
+  }
+
+  // PERMISOS ESPECÍFICOS PARA SUPERVISOR
+  puedeEliminarEmpleado(empleado: EmpleadoResponse): boolean {
+    const userRole = this.authService.getUserRole();
+
+    if (userRole === 'admin') {
+      return true;
+    }
+
+    if (userRole === 'supervisor') {
+      const currentUser = this.authService.getCurrentEmpleado();
+      const esMiPerfil = currentUser && currentUser.id === empleado.id;
+
+      // No puede eliminarse a sí mismo
+      if (esMiPerfil) {
+        return false;
+      }
+
+      // No puede eliminar admin ni otros supervisores
+      const empleadoRol = empleado.rol?.toLowerCase();
+      if (empleadoRol === 'admin' || empleadoRol === 'supervisor') {
+        return false;
+      }
+
+      // Solo puede eliminar tecnico, hd, noc
+      const rolesPermitidos = ['tecnico', 'hd', 'noc'];
+      return rolesPermitidos.includes(empleadoRol || '');
+    }
+
+    return false;
+  }
+
+  puedeCambiarEstadoEmpleado(empleado: EmpleadoResponse): boolean {
+    const userRole = this.authService.getUserRole();
+
+    if (userRole === 'admin') {
+      return true;
+    }
+
+    if (userRole === 'supervisor') {
+      const currentUser = this.authService.getCurrentEmpleado();
+      const esMiPerfil = currentUser && currentUser.id === empleado.id;
+
+      // No puede cambiar su propio estado
+      if (esMiPerfil) {
+        return false;
+      }
+
+      // No puede cambiar estado de admin ni otros supervisores
+      const empleadoRol = empleado.rol?.toLowerCase();
+      if (empleadoRol === 'admin' || empleadoRol === 'supervisor') {
+        return false;
+      }
+
+      // Solo puede cambiar estado de tecnico, hd, noc
+      const rolesPermitidos = ['tecnico', 'hd', 'noc'];
+      return rolesPermitidos.includes(empleadoRol || '');
+    }
+
+    return false;
+  }
+
+  getTooltipEliminar(empleado: EmpleadoResponse): string {
+    if (this.isLoading) return 'Espere...';
+
+    if (!this.puedeEliminarEmpleado(empleado)) {
+      const userRole = this.authService.getUserRole();
+      const currentUser = this.authService.getCurrentEmpleado();
+      const esMiPerfil = currentUser && currentUser.id === empleado.id;
+      const empleadoRol = empleado.rol?.toLowerCase();
+
+      if (userRole === 'supervisor') {
+        if (esMiPerfil) {
+          return 'No puede eliminarse a sí mismo';
+        }
+        if (empleadoRol === 'admin') {
+          return 'No puede eliminar administradores';
+        }
+        if (empleadoRol === 'supervisor') {
+          return 'No puede eliminar otros supervisores';
+        }
+      }
+      return 'No tiene permisos para eliminar este usuario';
+    }
+
+    return 'Eliminar usuario permanentemente';
+  }
+
+  getTooltipEstado(empleado: EmpleadoResponse): string {
+    if (this.isLoading) return 'Espere...';
+
+    if (!this.puedeCambiarEstadoEmpleado(empleado)) {
+      const userRole = this.authService.getUserRole();
+      const currentUser = this.authService.getCurrentEmpleado();
+      const esMiPerfil = currentUser && currentUser.id === empleado.id;
+      const empleadoRol = empleado.rol?.toLowerCase();
+
+      if (userRole === 'supervisor') {
+        if (esMiPerfil) {
+          return 'No puede cambiar su propio estado';
+        }
+        if (empleadoRol === 'admin') {
+          return 'No puede cambiar estado de administradores';
+        }
+        if (empleadoRol === 'supervisor') {
+          return 'No puede cambiar estado de otros supervisores';
+        }
+      }
+      return 'No tiene permisos para cambiar el estado';
+    }
+
+    return empleado.usuarioActivo ? 'Desactivar usuario' : 'Activar usuario';
+  }
+
+  // Controla si puede cambiar estado en el formulario de edición
+  puedeCambiarEstadoEnFormulario(): boolean {
+    if (!this.isEditing || !this.empleadoOriginal) {
+      return true;
+    }
+
+    const userRole = this.authService.getUserRole();
+
+    if (userRole === 'admin') {
+      return true;
+    }
+
+    if (userRole === 'supervisor') {
+      const currentUser = this.authService.getCurrentEmpleado();
+      const esMiPerfil = currentUser && currentUser.id === this.empleadoOriginal.id;
+
+      // No puede cambiar su propio estado
+      if (esMiPerfil) {
+        return false;
+      }
+
+      // No puede cambiar estado de admin ni otros supervisores
+      const empleadoRol = this.empleadoOriginal.rol?.toLowerCase();
+      if (empleadoRol === 'admin' || empleadoRol === 'supervisor') {
+        return false;
+      }
+
+      return true;
+    }
+
+    return false;
   }
 
   getEstadoTooltipCompleto(empleado: EmpleadoResponse): string {
@@ -612,17 +763,22 @@ export class EmpleadosComponent implements OnInit {
       }
 
       this.fotoFile = file;
-      
+
       const reader = new FileReader();
       reader.onload = (e) => {
         this.fotoPreview = e.target?.result || null;
+        // Forzar detección de cambios después de actualizar preview
+        this.cdr.detectChanges();
       };
       reader.readAsDataURL(file);
 
       // No actualizar el campo foto en el form (se maneja por separado)
-      
+
       this.empForm.markAsDirty();
       this.checkFormChanges();
+
+      // Forzar detección de cambios para habilitar botón guardar
+      this.cdr.detectChanges();
     }
   }
 
@@ -631,10 +787,12 @@ export class EmpleadosComponent implements OnInit {
       this.fileInput.nativeElement.value = '';
     }
     this.fotoFile = null;
-    this.fotoPreview = this.fotoActual ? 
-      this.getFotoUrl(this.fotoActual, this.empForm.get('nombre')?.value) : 
+    this.fotoPreview = this.fotoActual ?
+      this.getFotoUrl(this.fotoActual, this.empForm.get('nombre')?.value) :
       this.getAvatarPlaceholder(this.empForm.get('nombre')?.value);
     this.checkFormChanges();
+    // Forzar detección de cambios para actualizar botón guardar
+    this.cdr.detectChanges();
   }
 
   private formatearFechaParaInput(fecha: string | undefined): string {
@@ -666,25 +824,38 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
-  eliminar(id: number) {
+  eliminar(emp: EmpleadoResponse) {
     if (!this.puedeGestionarEmpleados()) {
       this.mostrarError('No tiene permisos para eliminar empleados');
       return;
     }
 
-    if (!confirm('¿Está seguro de desactivar este usuario? No podrá iniciar sesión pero permanecerá en registros.')) {
+    this.empleadoAEliminar = emp;
+    this.mostrarModalEliminar = true;
+  }
+
+  cancelarEliminar() {
+    this.mostrarModalEliminar = false;
+    this.empleadoAEliminar = null;
+  }
+
+  confirmarEliminar() {
+    if (!this.empleadoAEliminar || !this.empleadoAEliminar.id) {
+      this.cancelarEliminar();
       return;
     }
 
     this.isLoading = true;
-    this.empService.deleteEmpleado(id).subscribe({
-      next: () => {
-        this.mostrarMsg('Usuario desactivado correctamente');
+    this.empService.deleteEmpleado(this.empleadoAEliminar.id).subscribe({
+      next: (response) => {
+        this.mostrarMsg('Usuario eliminado permanentemente');
+        this.cancelarEliminar();
         this.cargarEmpleados();
       },
       error: (error) => {
         this.handleError(error);
         this.isLoading = false;
+        this.cancelarEliminar();
       }
     });
   }

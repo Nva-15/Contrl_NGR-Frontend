@@ -31,6 +31,10 @@ export class EmpleadosService {
     return this.http.delete(`${this.apiUrl}/${id}`);
   }
 
+  desactivarEmpleado(id: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/desactivar`, {});
+  }
+
   getEmpleadosByRol(rol: string): Observable<EmpleadoResponse[]> {
     return this.http.get<EmpleadoResponse[]>(`${this.apiUrl}/rol/${rol}`);
   }
