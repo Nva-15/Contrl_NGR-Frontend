@@ -3,11 +3,13 @@
     <div class="col-md-4 col-lg-4 col-xl-3">
       <div class="card shadow-lg border-0">
         <!-- Logo y Título -->
-        <div class="card-header bg-primary text-white text-center py-4">
-          <div class="mb-3">
-            <i class="bi bi-clock-history display-4"></i>
+        <div class="card-header login-header text-white text-center py-4">
+          <div class="mb-2">
+            <img src="http://localhost:8080/img/Logo.PNG"
+                 alt="Control NGR"
+                 class="img-fluid"
+                 style="max-height: 80px;">
           </div>
-          <h3 class="mb-0 fw-bold">Control NGR</h3>
           <small class="opacity-75">Sistema de Gestión de Asistencia</small>
         </div>
         
@@ -61,9 +63,9 @@
             </div>
 
             <!-- Botón Login -->
-            <button 
-              type="submit" 
-              class="btn btn-primary w-100 py-3 fw-semibold"
+            <button
+              type="submit"
+              class="btn btn-login w-100 py-3 fw-semibold"
               [disabled]="!credentials.username || !credentials.password || isLoading">
               <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
               <i *ngIf="!isLoading" class="bi bi-box-arrow-in-right me-2"></i>
@@ -91,9 +93,9 @@
         </div>
 
         <!-- Footer del card -->
-        <div class="card-footer bg-light text-center py-3">
+        <div class="card-footer text-center py-3" style="background-color: #F5F0EB;">
           <small class="text-muted">
-            © 2024 Control NGR - Sistema de Asistencia
+            © 2025 Control NGR - Sistema de Asistencia
           </small>
         </div>
       </div>
