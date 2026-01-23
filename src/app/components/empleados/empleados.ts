@@ -146,28 +146,71 @@ export class EmpleadosComponent implements OnInit {
     }
 
     const formValue = this.empForm.getRawValue();
-    
-    const cambiosDetectados = 
-      formValue.nombre.trim() !== this.empleadoOriginal.nombre ||
-      formValue.cargo.trim() !== this.empleadoOriginal.cargo ||
-      formValue.nivel !== this.empleadoOriginal.nivel ||
-      formValue.rol !== this.empleadoOriginal.rol ||
-      formValue.cumpleanos !== this.empleadoOriginal.cumpleanos ||
-      formValue.ingreso !== this.empleadoOriginal.ingreso ||
-      formValue.hobby?.trim() !== (this.empleadoOriginal.hobby || '') ||
-      formValue.descripcion?.trim() !== (this.empleadoOriginal.descripcion || '') ||
-      formValue.email?.trim().toLowerCase() !== (this.empleadoOriginal.email || '') ||
-      formValue.username?.trim() !== this.empleadoOriginal.username ||
-      (formValue.password && formValue.password.trim().length >= 6) ||
-      formValue.usuarioActivo !== this.empleadoOriginal.usuarioActivo ||
-      formValue.activo !== this.empleadoOriginal.activo ||
-      this.fotoFile !== null;
+
+    // Funciones auxiliares para comparación segura
+    const safeStr = (val: any): string => (val || '').toString().trim();
+    const safeLower = (val: any): string => safeStr(val).toLowerCase();
+
+    // Verificar cada campo individualmente para debug
+    const cambioNombre = safeStr(formValue.nombre) !== safeStr(this.empleadoOriginal.nombre);
+    const cambioCargo = safeStr(formValue.cargo) !== safeStr(this.empleadoOriginal.cargo);
+    const cambioNivel = safeStr(formValue.nivel) !== safeStr(this.empleadoOriginal.nivel);
+    const cambioRol = safeStr(formValue.rol) !== safeStr(this.empleadoOriginal.rol);
+    const cambioCumple = safeStr(formValue.cumpleanos) !== safeStr(this.empleadoOriginal.cumpleanos);
+    const cambioIngreso = safeStr(formValue.ingreso) !== safeStr(this.empleadoOriginal.ingreso);
+    const cambioHobby = safeStr(formValue.hobby) !== safeStr(this.empleadoOriginal.hobby);
+    const cambioDesc = safeStr(formValue.descripcion) !== safeStr(this.empleadoOriginal.descripcion);
+    const cambioEmail = safeLower(formValue.email) !== safeLower(this.empleadoOriginal.email);
+    const cambioUsername = safeStr(formValue.username) !== safeStr(this.empleadoOriginal.username);
+    const cambioPassword = formValue.password && safeStr(formValue.password).length >= 6;
+    const cambioUsuarioActivo = formValue.usuarioActivo !== this.empleadoOriginal.usuarioActivo;
+    const cambioActivo = formValue.activo !== this.empleadoOriginal.activo;
+    const cambioFoto = this.fotoFile !== null;
+
+    const cambiosDetectados = cambioNombre || cambioCargo || cambioNivel || cambioRol ||
+      cambioCumple || cambioIngreso || cambioHobby || cambioDesc || cambioEmail ||
+      cambioUsername || cambioPassword || cambioUsuarioActivo || cambioActivo || cambioFoto;
+
+    // Debug logging - descomentar para ver en consola
+    console.log('🔍 checkFormChanges:', {
+      cambioNombre, cambioCargo, cambioNivel, cambioRol,
+      cambioHobby, cambioDesc, cambioEmail,
+      cambioPassword, cambioUsuarioActivo, cambioActivo, cambioFoto,
+      resultado: cambiosDetectados,
+      formValue: { nombre: formValue.nombre, hobby: formValue.hobby, descripcion: formValue.descripcion },
+      original: { nombre: this.empleadoOriginal.nombre, hobby: this.empleadoOriginal.hobby, descripcion: this.empleadoOriginal.descripcion }
+    });
 
     this.formHasChanges = cambiosDetectados;
+    this.cdr.detectChanges(); // Forzar actualización de la vista
   }
 
   guardar() {
-    if (this.empForm.invalid) {
+    console.log('🚀 guardar() llamado', {
+      formValid: this.empForm.valid,
+      formInvalid: this.empForm.invalid,
+      isEditing: this.isEditing,
+      formHasChanges: this.formHasChanges
+    });
+
+    // En modo edición, validar de forma más permisiva (ignorar password vacío)
+    if (this.isEditing) {
+      const errores = this.getFormValidationErrors();
+      // Ignorar error de password si está vacío
+      const passwordValue = this.empForm.get('password')?.value;
+      if (errores.password && (!passwordValue || passwordValue.length === 0)) {
+        delete errores.password;
+      }
+
+      // Si hay otros errores además de password, rechazar
+      if (Object.keys(errores).length > 0) {
+        console.log('❌ Formulario inválido en edición, campos con error:', errores);
+        this.empForm.markAllAsTouched();
+        this.mostrarError('Por favor, complete todos los campos requeridos correctamente.');
+        return;
+      }
+    } else if (this.empForm.invalid) {
+      console.log('❌ Formulario inválido, campos con error:', this.getFormValidationErrors());
       this.empForm.markAllAsTouched();
       this.mostrarError('Por favor, complete todos los campos requeridos correctamente.');
       return;
@@ -177,12 +220,27 @@ export class EmpleadosComponent implements OnInit {
     this.mensajeError = '';
 
     const formValue = this.empForm.getRawValue();
-    
+    console.log('📦 Datos a enviar:', formValue);
+
     if (this.isEditing && formValue.id) {
+      console.log('✏️ Actualizando empleado ID:', formValue.id);
       this.actualizarEmpleado(formValue);
     } else {
+      console.log('➕ Creando nuevo empleado');
       this.crearEmpleado(formValue);
     }
+  }
+
+  // Método auxiliar para debug de errores de validación
+  private getFormValidationErrors(): any {
+    const errors: any = {};
+    Object.keys(this.empForm.controls).forEach(key => {
+      const control = this.empForm.get(key);
+      if (control && control.errors) {
+        errors[key] = control.errors;
+      }
+    });
+    return errors;
   }
 
   private crearEmpleado(formValue: any) {
@@ -202,8 +260,11 @@ export class EmpleadosComponent implements OnInit {
 
   private actualizarEmpleado(formValue: any) {
     const empleadoData = this.prepararPayloadEdicion(formValue);
-    
+    console.log('📝 Payload de edición:', empleadoData);
+    console.log('🖼️ Archivo de foto:', this.fotoFile);
+
     if (Object.keys(empleadoData).length === 0 && !this.fotoFile) {
+      console.log('⚠️ No hay cambios para actualizar');
       this.isLoading = false;
       this.mostrarMsg('No se detectaron cambios para actualizar');
       return;
@@ -313,16 +374,21 @@ export class EmpleadosComponent implements OnInit {
       payload.ingreso = formValue.ingreso;
     }
 
-    const hobby = formValue.hobby?.trim();
-    const descripcion = formValue.descripcion?.trim();
+    // Hobby: enviar string vacío si el usuario borró el contenido (no null)
+    const hobby = formValue.hobby?.trim() ?? '';
+    const descripcion = formValue.descripcion?.trim() ?? '';
     const email = formValue.email?.trim().toLowerCase();
 
-    if (hobby !== (original.hobby || '')) {
-      payload.hobby = hobby || null;
+    // Comparar hobby: si cambió (incluyendo de "algo" a vacío), incluir en payload
+    const originalHobby = original.hobby ?? '';
+    if (hobby !== originalHobby) {
+      payload.hobby = hobby;  // Enviar string vacío para limpiar, no null
     }
 
-    if (descripcion !== (original.descripcion || '')) {
-      payload.descripcion = descripcion || null;
+    // Comparar descripcion: si cambió (incluyendo de "algo" a vacío), incluir en payload
+    const originalDescripcion = original.descripcion ?? '';
+    if (descripcion !== originalDescripcion) {
+      payload.descripcion = descripcion;  // Enviar string vacío para limpiar, no null
     }
 
     if (email !== (original.email || '')) {
@@ -641,10 +707,15 @@ export class EmpleadosComponent implements OnInit {
       activo: emp.activo ?? true
     }, { emitEvent: false });
 
-    this.empForm.get('password')?.clearValidators();
-    this.empForm.get('password')?.updateValueAndValidity();
-    
+    // Limpiar validadores de password en modo edición (password vacío es válido)
+    const passwordControl = this.empForm.get('password');
+    if (passwordControl) {
+      passwordControl.clearValidators();
+      passwordControl.updateValueAndValidity({ emitEvent: false });
+    }
+
     this.empForm.markAsPristine();
+    this.empForm.markAsUntouched();
   }
 
   cambiarEstado(id: number, nuevoEstado: boolean) {
@@ -969,12 +1040,25 @@ export class EmpleadosComponent implements OnInit {
 
   isFormValid(): boolean {
     if (this.isLoading) return false;
-    
+
     if (!this.isEditing) {
       return this.empForm.valid;
     }
-    
-    return this.empForm.valid && this.formHasChanges;
+
+    // En modo edición: verificar campos críticos (ignorando password vacío)
+    const tieneCambios = this.formHasChanges || this.fotoFile !== null;
+
+    // Verificar solo campos críticos para edición
+    const nombreValido = this.empForm.get('nombre')?.valid ?? true;
+    const cargoValido = this.empForm.get('cargo')?.valid ?? true;
+    const nivelValido = this.empForm.get('nivel')?.valid ?? true;
+    const dniValido = this.empForm.get('dni')?.valid ?? true;
+
+    // Password es opcional en edición - verificar solo si tiene valor
+    const passwordValue = this.empForm.get('password')?.value;
+    const passwordValido = !passwordValue || passwordValue.length === 0 || passwordValue.length >= 6;
+
+    return nombreValido && cargoValido && nivelValido && dniValido && passwordValido && tieneCambios;
   }
 
   getEstadoTooltip(estado: boolean | undefined): string {

@@ -318,11 +318,12 @@
                 
                 <div class="col-12">
                   <label class="form-label fw-bold">Nombre Completo</label>
-                  <input type="text" 
-                         class="form-control" 
-                         formControlName="nombre" 
+                  <input type="text"
+                         class="form-control"
+                         formControlName="nombre"
                          [class.is-invalid]="esInvalido('nombre')"
-                         placeholder="Ej: Juan Pérez García">
+                         placeholder="Ej: Juan Pérez García"
+                         (input)="checkFormChanges()">
                   <div class="invalid-feedback" *ngIf="esInvalido('nombre')">
                     El nombre es requerido (mínimo 3 caracteres)
                   </div>
@@ -350,18 +351,20 @@
                 
                 <div class="col-md-6">
                   <label class="form-label">Hobby / Pasatiempo</label>
-                  <input type="text" 
-                         class="form-control" 
-                         formControlName="hobby" 
-                         placeholder="Ej: Fútbol, Música, Lectura...">
+                  <input type="text"
+                         class="form-control"
+                         formControlName="hobby"
+                         placeholder="Ej: Fútbol, Música, Lectura..."
+                         (input)="checkFormChanges()">
                 </div>
-                
+
                 <div class="col-md-6">
                   <label class="form-label">Descripción Breve</label>
-                  <textarea class="form-control" 
-                            rows="2" 
-                            formControlName="descripcion" 
-                            placeholder="Una breve descripción del empleado..."></textarea>
+                  <textarea class="form-control"
+                            rows="2"
+                            formControlName="descripcion"
+                            placeholder="Una breve descripción del empleado..."
+                            (input)="checkFormChanges()"></textarea>
                 </div>
               </div>
             </div>
@@ -375,11 +378,12 @@
               <div class="row g-3">
                 <div class="col-md-6">
                   <label class="form-label fw-bold">Cargo</label>
-                  <input type="text" 
-                         class="form-control" 
-                         formControlName="cargo" 
+                  <input type="text"
+                         class="form-control"
+                         formControlName="cargo"
                          [class.is-invalid]="esInvalido('cargo')"
-                         placeholder="Ej: Supervisor, Técnico, Jefe...">
+                         placeholder="Ej: Supervisor, Técnico, Jefe..."
+                         (input)="checkFormChanges()">
                   <div class="invalid-feedback" *ngIf="esInvalido('cargo')">
                     El cargo es requerido
                   </div>
@@ -387,9 +391,10 @@
                 
                 <div class="col-md-6">
                   <label class="form-label fw-bold">Nivel Jerárquico</label>
-                  <select class="form-select" 
-                          formControlName="nivel" 
-                          [class.is-invalid]="esInvalido('nivel')">
+                  <select class="form-select"
+                          formControlName="nivel"
+                          [class.is-invalid]="esInvalido('nivel')"
+                          (change)="checkFormChanges()">
                     <option value="">Seleccione un nivel</option>
                     <option *ngFor="let nivel of niveles" [value]="nivel.value">
                       {{ nivel.label }}
@@ -422,9 +427,10 @@
                 
                 <div class="col-md-4">
                   <label class="form-label fw-bold">Rol de Permisos</label>
-                  <select class="form-select" 
-                          formControlName="rol" 
-                          [class.is-invalid]="esInvalido('rol')">
+                  <select class="form-select"
+                          formControlName="rol"
+                          [class.is-invalid]="esInvalido('rol')"
+                          (change)="checkFormChanges()">
                     <option value="">Seleccione un rol</option>
                     <option *ngFor="let rol of roles" [value]="rol.value">
                       {{ rol.label }}
