@@ -599,19 +599,13 @@
               </td>
               <td class="text-end pe-4">
                 <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-primary" 
-                          (click)="cargarSolicitudParaEditar(sol)" 
-                          *ngIf="puedeEditarSolicitud(sol)"
-                          title="Editar">
-                    <i class="bi bi-pencil me-1"></i> Editar
-                  </button>
-                  <button class="btn btn-success" 
-                          (click)="procesar(sol.id!, 'aprobado')" 
+                  <button class="btn btn-success"
+                          (click)="procesar(sol.id!, 'aprobado')"
                           title="Aprobar">
                     <i class="bi bi-check-lg me-1"></i> Aprobar
                   </button>
-                  <button class="btn btn-outline-danger" 
-                          (click)="procesar(sol.id!, 'rechazado')" 
+                  <button class="btn btn-outline-danger"
+                          (click)="procesar(sol.id!, 'rechazado')"
                           title="Rechazar">
                     <i class="bi bi-x-lg me-1"></i> Rechazar
                   </button>
@@ -698,12 +692,21 @@
                 {{ sol.fechaAprobacion ? formatFechaHora(sol.fechaAprobacion) : 'N/A' }}
               </td>
               <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" 
-                        (click)="cargarSolicitudParaEditar(sol)" 
-                        *ngIf="puedeEditarSolicitud(sol)"
-                        title="Editar">
-                  <i class="bi bi-pencil"></i>
-                </button>
+                <div class="btn-group btn-group-sm" *ngIf="puedeCorregirEstado(sol)">
+                  <button class="btn btn-outline-success btn-sm"
+                          *ngIf="sol.estado === 'rechazado'"
+                          (click)="corregirEstado(sol.id!, 'aprobado')"
+                          title="Cambiar a Aprobado">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm"
+                          *ngIf="sol.estado === 'aprobado'"
+                          (click)="corregirEstado(sol.id!, 'rechazado')"
+                          title="Cambiar a Rechazado">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+                <span *ngIf="!puedeCorregirEstado(sol)" class="text-muted small">—</span>
               </td>
             </tr>
             <tr *ngIf="historialGlobalFiltrado.length === 0">
@@ -723,5 +726,93 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Confirmación de Conflictos -->
+  <div class="modal fade show"
+       [class.d-block]="mostrarModalConflictos"
+       [style.display]="mostrarModalConflictos ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog"
+       *ngIf="mostrarModalConflictos">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            Conflicto de Fechas Detectado
+          </h5>
+          <button type="button"
+                  class="btn-close"
+                  (click)="cancelarConflictos()"
+                  [disabled]="isLoading">
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning mb-3">
+            <i class="bi bi-calendar-x me-2"></i>
+            <strong>Atención:</strong> {{ mensajeConflictos }}
+          </div>
+
+          <h6 class="text-muted mb-3">
+            <i class="bi bi-people me-2"></i>
+            Existe conflicto de fechas con las siguientes solicitudes de compañeros del mismo rol:
+          </h6>
+
+          <div class="table-responsive" *ngIf="conflictosDetectados.length > 0">
+            <table class="table table-sm table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th>Empleado</th>
+                  <th>Tipo</th>
+                  <th>Fecha Inicio</th>
+                  <th>Fecha Fin</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let conflicto of conflictosDetectados">
+                  <td class="fw-bold">{{ conflicto.empleado || conflicto.empleadoNombre || conflicto.nombreEmpleado || 'N/A' }}</td>
+                  <td>
+                    <span class="badge bg-secondary">{{ (conflicto.tipo || '') | titlecase }}</span>
+                  </td>
+                  <td>{{ formatFecha(conflicto.fechaInicio) }}</td>
+                  <td>{{ formatFecha(conflicto.fechaFin) }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="getEstadoClass(conflicto.estado || 'pendiente')">
+                      {{ (conflicto.estado || 'pendiente') | titlecase }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert alert-info mt-3 mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Nota:</strong> Si continúa, se agregará una nota informativa en el motivo de su solicitud indicando el conflicto detectado.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button"
+                  class="btn btn-secondary"
+                  (click)="cancelarConflictos()"
+                  [disabled]="isLoading">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </button>
+          <button type="button"
+                  class="btn btn-warning"
+                  (click)="confirmarConflictos()"
+                  [disabled]="isLoading">
+            <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="bi bi-check-circle me-1" *ngIf="!isLoading"></i>
+            {{ isLoading ? 'Procesando...' : 'Continuar de todos modos' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Backdrop del Modal de Conflictos -->
+  <div class="modal-backdrop fade show" *ngIf="mostrarModalConflictos"></div>
 
 </div>

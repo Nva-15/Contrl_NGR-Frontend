@@ -7,6 +7,7 @@ import { EmpleadosService } from '../../services/empleados';
 import { AuthService } from '../../services/auth';
 import { ExportService } from '../../services/export';
 import { EmpleadoResponse } from '../../interfaces/empleado';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-empleados',
@@ -25,6 +26,7 @@ export class EmpleadosComponent implements OnInit {
   http = inject(HttpClient);
   router = inject(Router);
   cdr = inject(ChangeDetectorRef);
+  notification = inject(NotificationService);
 
   empForm: FormGroup;
   
@@ -718,18 +720,27 @@ export class EmpleadosComponent implements OnInit {
     this.empForm.markAsUntouched();
   }
 
-  cambiarEstado(id: number, nuevoEstado: boolean) {
+  async cambiarEstado(id: number, nuevoEstado: boolean) {
     if (!this.puedeGestionarEmpleados()) {
       this.mostrarError('No tiene permisos para cambiar el estado de usuarios');
       return;
     }
 
     const accion = nuevoEstado ? 'activar' : 'desactivar';
-    const confirmText = nuevoEstado 
+    const tipo = nuevoEstado ? 'success' : 'warning';
+    const confirmText = nuevoEstado
       ? '¿Activar este usuario? Podrá iniciar sesión y aparecerá en el sistema.'
       : '¿Desactivar este usuario? No podrá iniciar sesión pero permanecerá en registros.';
-    
-    if (!confirm(confirmText)) {
+
+    const confirmado = await this.notification.confirm({
+      title: nuevoEstado ? 'Activar usuario' : 'Desactivar usuario',
+      message: confirmText,
+      confirmText: nuevoEstado ? 'Sí, activar' : 'Sí, desactivar',
+      cancelText: 'Cancelar',
+      type: tipo as 'success' | 'warning'
+    });
+
+    if (!confirmado) {
       const index = this.empleados.findIndex(e => e.id === id);
       if (index !== -1) {
         this.empleados[index].usuarioActivo = !nuevoEstado;
@@ -737,7 +748,7 @@ export class EmpleadosComponent implements OnInit {
       }
       return;
     }
-    
+
     this.isLoading = true;
     this.empService.cambiarEstadoUsuario(id, nuevoEstado).subscribe({
       next: (response) => {
@@ -770,13 +781,13 @@ export class EmpleadosComponent implements OnInit {
         if (datos.length > 0) {
           this.exportService.exportToExcel(datos, 'empleados_ngr', 'Empleados');
         } else {
-          alert('No hay datos para exportar');
+          this.notification.warning('No hay datos para exportar', 'Sin datos');
         }
         this.isLoading = false;
       },
       error: (e) => {
         console.error('Error exportando:', e);
-        alert('Error al exportar datos a Excel');
+        this.notification.error('Error al exportar datos a Excel', 'Error');
         this.isLoading = false;
       }
     });
@@ -805,13 +816,13 @@ export class EmpleadosComponent implements OnInit {
             filename: 'empleados_ngr'
           });
         } else {
-          alert('No hay datos para exportar');
+          this.notification.warning('No hay datos para exportar', 'Sin datos');
         }
         this.isLoading = false;
       },
       error: (e) => {
         console.error('Error exportando PDF:', e);
-        alert('Error al exportar datos a PDF');
+        this.notification.error('Error al exportar datos a PDF', 'Error');
         this.isLoading = false;
       }
     });
@@ -971,13 +982,11 @@ export class EmpleadosComponent implements OnInit {
   }
 
   mostrarMsg(msg: string) {
-    this.mensaje = msg;
-    setTimeout(() => this.mensaje = '', 5000);
+    this.notification.success(msg, 'Exitoso');
   }
 
   mostrarError(msg: string) {
-    this.mensajeError = msg;
-    setTimeout(() => this.mensajeError = '', 5000);
+    this.notification.error(msg, 'Error');
   }
 
   handleError(e: any) {

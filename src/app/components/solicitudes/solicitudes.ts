@@ -7,6 +7,7 @@ import { SolicitudResponse } from '../../interfaces/solicitud';
 import { ActivatedRoute } from '@angular/router';
 import { EmpleadosService } from '../../services/empleados';
 import { FormsModule } from '@angular/forms';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-solicitudes',
@@ -20,6 +21,7 @@ export class SolicitudesComponent implements OnInit {
   private exportService = inject(ExportService);
   private empleadosService = inject(EmpleadosService);
   private route = inject(ActivatedRoute);
+  private notification = inject(NotificationService);
 
   currentUser: any;
   misSolicitudes: SolicitudResponse[] = [];
@@ -58,7 +60,8 @@ export class SolicitudesComponent implements OnInit {
   tieneConflictos = false;
   mensajeConflictos = '';
   conflictosDetectados: any[] = [];
-  mostrarConfirmacionConflictos = false;
+  mostrarModalConflictos = false;
+  accionPendiente: 'crear' | 'editar' | null = null;
 
   solicitudEditando: SolicitudResponse | null = null;
   editandoSolicitud = {
@@ -107,29 +110,60 @@ export class SolicitudesComponent implements OnInit {
 
   puedeEditarSolicitud(solicitud: SolicitudResponse): boolean {
     if (!solicitud.estado || !this.currentUser) return false;
-    
+
     const esMiSolicitud = solicitud.empleadoId === this.currentUser.id;
-    const solicitudRol = this.obtenerRolEmpleado(solicitud.empleadoId);
-    
-    if (solicitud.estado === 'pendiente') {
-      return esMiSolicitud || this.esJefe();
+
+    // Solo el dueño puede editar su solicitud y solo si está pendiente
+    return esMiSolicitud && solicitud.estado === 'pendiente';
+  }
+
+  // Verificar si el jefe puede corregir el estado de una solicitud ya procesada
+  puedeCorregirEstado(solicitud: SolicitudResponse): boolean {
+    if (!solicitud.estado || !this.currentUser) return false;
+
+    // Solo para solicitudes aprobadas o rechazadas
+    if (!['aprobado', 'rechazado'].includes(solicitud.estado)) return false;
+
+    // No puede corregir su propia solicitud
+    const esMiSolicitud = solicitud.empleadoId === this.currentUser.id;
+    if (esMiSolicitud) return false;
+
+    // Verificar permisos según rol del empleado de la solicitud
+    const rolSolicitud = this.obtenerRolEmpleado(solicitud.empleadoId);
+
+    if (['tecnico', 'hd', 'noc'].includes(rolSolicitud)) {
+      return this.esJefe(); // Supervisor o Admin
     }
-    
-    if (['aprobada', 'rechazada', 'cancelada'].includes(solicitud.estado)) {
-      if (esMiSolicitud) return false;
-      
-      if (['tecnico', 'hd', 'noc'].includes(solicitudRol)) {
-        return this.esJefe();
-      }
-      
-      if (solicitudRol === 'supervisor') {
-        return this.esAdmin();
-      }
-      
-      return this.esAdmin();
+
+    if (rolSolicitud === 'supervisor') {
+      return this.esAdmin(); // Solo Admin
     }
-    
-    return false;
+
+    return this.esAdmin();
+  }
+
+  // Corregir el estado de una solicitud (en caso de error)
+  async corregirEstado(id: number, nuevoEstado: string) {
+    const estadoTexto = nuevoEstado === 'aprobado' ? 'APROBADO' : 'RECHAZADO';
+    const tipo = nuevoEstado === 'aprobado' ? 'success' : 'danger';
+
+    const confirmado = await this.notification.confirm({
+      title: 'Corregir estado',
+      message: `¿Confirma que desea cambiar el estado de esta solicitud a ${estadoTexto}?`,
+      confirmText: 'Sí, corregir',
+      cancelText: 'Cancelar',
+      type: tipo as 'success' | 'danger'
+    });
+
+    if (!confirmado) return;
+
+    this.solicitudesService.gestionarSolicitud(id, nuevoEstado, this.currentUser.id).subscribe({
+      next: () => {
+        this.cargarDatos();
+        this.notification.success(`Estado corregido a ${estadoTexto} correctamente`, 'Estado corregido');
+      },
+      error: (err) => this.notification.error(err || 'Error al corregir el estado', 'Error')
+    });
   }
 
   cargarDatos() {
@@ -184,17 +218,17 @@ export class SolicitudesComponent implements OnInit {
 
   crearSolicitud() {
     if (!this.nuevaSolicitud.fechaInicio || !this.nuevaSolicitud.fechaFin) {
-      alert('Por favor selecciona las fechas de inicio y fin');
+      this.notification.warning('Por favor selecciona las fechas de inicio y fin', 'Campos requeridos');
       return;
     }
-    
+
     if (this.nuevaSolicitud.fechaInicio > this.nuevaSolicitud.fechaFin) {
-      alert('La fecha de fin no puede ser anterior a la fecha de inicio');
+      this.notification.warning('La fecha de fin no puede ser anterior a la fecha de inicio', 'Fechas inválidas');
       return;
     }
-  
+
     this.isLoading = true;
-    
+
     this.solicitudesService.verificarConflictosPorRol(
       this.currentUser.id,
       this.currentUser.rol,
@@ -202,10 +236,18 @@ export class SolicitudesComponent implements OnInit {
       this.nuevaSolicitud.fechaFin
     ).subscribe({
       next: (response) => {
-        if (response.tieneConflictos) {
-          alert(response.mensaje);
+        if (response.tieneConflictos && response.conflictos && response.conflictos.length > 0) {
+          // Mostrar modal de confirmación con información de conflictos
+          this.tieneConflictos = true;
+          this.mensajeConflictos = response.mensaje;
+          this.conflictosDetectados = response.conflictos;
+          this.accionPendiente = 'crear';
+          this.mostrarModalConflictos = true;
+          this.isLoading = false;
+        } else {
+          // No hay conflictos, proceder directamente
+          this.enviarSolicitud();
         }
-        this.enviarSolicitud();
       },
       error: (err) => {
         console.error('Error verificando conflictos:', err);
@@ -223,23 +265,21 @@ export class SolicitudesComponent implements OnInit {
     this.solicitudesService.crearSolicitud(payload).subscribe({
       next: (response) => {
         if (response.tieneNotaConflicto) {
-          this.mensaje = '✅ Solicitud enviada. Se detectaron conflictos de fechas, se ha agregado una nota informativa en el motivo.';
-          alert('✅ Solicitud enviada. Se detectaron conflictos de fechas, se ha agregado una nota informativa en el motivo.');
+          this.notification.info('Se detectaron conflictos de fechas. Se ha agregado una nota informativa en el motivo.', 'Solicitud enviada');
         } else {
-          this.mensaje = '✅ Solicitud enviada correctamente.';
+          this.notification.success('Tu solicitud ha sido registrada correctamente.', 'Solicitud enviada');
         }
-        
+
         this.cargarDatos();
         this.limpiarFormulario();
         if (this.activeTab === 'crear') this.activeTab = 'mis-solicitudes';
         this.tieneConflictos = false;
         this.mensajeConflictos = '';
         this.conflictosDetectados = [];
-        setTimeout(() => this.mensaje = '', 5000);
         this.isLoading = false;
       },
       error: (err) => {
-        alert(err || 'Error al procesar solicitud');
+        this.notification.error(err || 'Error al procesar solicitud', 'Error');
         this.isLoading = false;
       }
     });
@@ -252,7 +292,7 @@ export class SolicitudesComponent implements OnInit {
 
   cargarSolicitudParaEditar(solicitud: SolicitudResponse) {
     if (!this.puedeEditarSolicitud(solicitud)) {
-      alert('No tiene permisos para editar esta solicitud');
+      this.notification.error('No tiene permisos para editar esta solicitud', 'Acceso denegado');
       return;
     }
     
@@ -279,17 +319,17 @@ export class SolicitudesComponent implements OnInit {
 
   guardarEdicion() {
     if (!this.editandoSolicitud.fechaInicio || !this.editandoSolicitud.fechaFin) {
-      alert('Por favor selecciona las fechas de inicio y fin');
+      this.notification.warning('Por favor selecciona las fechas de inicio y fin', 'Campos requeridos');
       return;
     }
 
     if (this.editandoSolicitud.fechaInicio > this.editandoSolicitud.fechaFin) {
-      alert('La fecha de fin no puede ser anterior a la fecha de inicio');
+      this.notification.warning('La fecha de fin no puede ser anterior a la fecha de inicio', 'Fechas inválidas');
       return;
     }
 
     this.isLoading = true;
-    
+
     this.solicitudesService.verificarConflictosPorRol(
       this.currentUser.id,
       this.currentUser.rol,
@@ -297,13 +337,25 @@ export class SolicitudesComponent implements OnInit {
       this.editandoSolicitud.fechaFin
     ).subscribe({
       next: (response) => {
-        if (response.tieneConflictos) {
+        if (response.tieneConflictos && response.conflictos) {
+          // Filtrar la solicitud actual (no es conflicto consigo misma)
           const conflictosFiltrados = response.conflictos.filter((c: any) => c.id !== this.editandoSolicitud.id);
           if (conflictosFiltrados.length > 0) {
-            alert(response.mensaje);
+            // Mostrar modal de confirmación con información de conflictos
+            this.tieneConflictos = true;
+            this.mensajeConflictos = response.mensaje;
+            this.conflictosDetectados = conflictosFiltrados;
+            this.accionPendiente = 'editar';
+            this.mostrarModalConflictos = true;
+            this.isLoading = false;
+          } else {
+            // No hay conflictos reales, proceder
+            this.actualizarSolicitud();
           }
+        } else {
+          // No hay conflictos, proceder directamente
+          this.actualizarSolicitud();
         }
-        this.actualizarSolicitud();
       },
       error: () => this.actualizarSolicitud()
     });
@@ -327,14 +379,13 @@ export class SolicitudesComponent implements OnInit {
   
     this.solicitudesService.editarSolicitud(this.editandoSolicitud.id, payload).subscribe({
       next: (response) => {
-        this.mensaje = 'Solicitud actualizada correctamente';
+        this.notification.success('La solicitud ha sido actualizada correctamente.', 'Solicitud actualizada');
         this.cargarDatos();
         this.cancelarEdicion();
-        setTimeout(() => this.mensaje = '', 3000);
         this.isLoading = false;
       },
       error: (err) => {
-        alert(err || 'Error al actualizar solicitud');
+        this.notification.error(err || 'Error al actualizar solicitud', 'Error');
         this.isLoading = false;
       }
     });
@@ -538,9 +589,9 @@ export class SolicitudesComponent implements OnInit {
   exportarExcel() {
     this.exportando = true;
     const datos = this.obtenerDatosParaExportar();
-    
+
     if (datos.length === 0) {
-      alert('No hay datos para exportar');
+      this.notification.warning('No hay datos para exportar', 'Sin datos');
       this.exportando = false;
       return;
     }
@@ -553,9 +604,9 @@ export class SolicitudesComponent implements OnInit {
   exportarPDF() {
     this.exportando = true;
     const datos = this.obtenerDatosParaExportar();
-    
+
     if (datos.length === 0) {
-      alert('No hay datos para exportar');
+      this.notification.warning('No hay datos para exportar', 'Sin datos');
       this.exportando = false;
       return;
     }
@@ -723,15 +774,30 @@ export class SolicitudesComponent implements OnInit {
     }
   }
 
-  procesar(id: number, estado: string) {
-    if (!confirm(`¿Confirma que desea marcar esta solicitud como ${estado.toUpperCase()}?`)) return;
+  async procesar(id: number, estado: string) {
+    const estadoTexto = estado === 'aprobado' ? 'APROBAR' : 'RECHAZAR';
+    const tipo = estado === 'aprobado' ? 'success' : 'danger';
+
+    const confirmado = await this.notification.confirm({
+      title: `${estadoTexto} Solicitud`,
+      message: `¿Confirma que desea ${estadoTexto.toLowerCase()} esta solicitud?`,
+      confirmText: estadoTexto,
+      cancelText: 'Cancelar',
+      type: tipo
+    });
+
+    if (!confirmado) return;
 
     this.solicitudesService.gestionarSolicitud(id, estado, this.currentUser.id).subscribe({
       next: () => {
         this.cargarDatos();
-        alert(`Solicitud ${estado} correctamente`);
+        if (estado === 'aprobado') {
+          this.notification.success('La solicitud ha sido aprobada correctamente.', 'Solicitud aprobada');
+        } else {
+          this.notification.info('La solicitud ha sido rechazada.', 'Solicitud rechazada');
+        }
       },
-      error: () => alert('Error al procesar la solicitud')
+      error: () => this.notification.error('Error al procesar la solicitud', 'Error')
     });
   }
 
@@ -745,7 +811,32 @@ export class SolicitudesComponent implements OnInit {
     this.tieneConflictos = false;
     this.mensajeConflictos = '';
     this.conflictosDetectados = [];
-    this.mostrarConfirmacionConflictos = false;
+    this.mostrarModalConflictos = false;
+    this.accionPendiente = null;
+  }
+
+  // Confirmar continuar a pesar de los conflictos
+  confirmarConflictos() {
+    this.mostrarModalConflictos = false;
+    this.isLoading = true;
+
+    if (this.accionPendiente === 'crear') {
+      this.enviarSolicitud();
+    } else if (this.accionPendiente === 'editar') {
+      this.actualizarSolicitud();
+    }
+
+    this.accionPendiente = null;
+  }
+
+  // Cancelar la acción debido a conflictos
+  cancelarConflictos() {
+    this.mostrarModalConflictos = false;
+    this.tieneConflictos = false;
+    this.mensajeConflictos = '';
+    this.conflictosDetectados = [];
+    this.accionPendiente = null;
+    this.isLoading = false;
   }
 
   getEstadoClass(estado: string): string {
