@@ -6,6 +6,7 @@ import { authGuard } from './guards/auth-guard';
 import { MainLayoutComponent } from './layouts/main-layout/main-layout';
 import { EmpleadosComponent } from './components/empleados/empleados';
 import { OrganigramaComponent } from './components/organigrama/organigrama';
+import { HorariosComponent } from './components/horarios/horarios';
 
 export const routes: Routes = [
   { 
@@ -38,10 +39,15 @@ export const routes: Routes = [
         component: EmpleadosComponent, 
         title: 'Gestión de Empleados'
       },
-      { 
-        path: 'organigrama', 
-        component: OrganigramaComponent, 
-        title: 'Organigrama' 
+      {
+        path: 'organigrama',
+        component: OrganigramaComponent,
+        title: 'Organigrama'
+      },
+      {
+        path: 'horarios',
+        component: HorariosComponent,
+        title: 'Gestion de Horarios'
       },
     ]
   },

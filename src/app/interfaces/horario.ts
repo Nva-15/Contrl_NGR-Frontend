@@ -1,13 +1,40 @@
 export interface Horario {
-    id?: number;
-    empleadoId: number;
-    diaSemana: string; // 'lunes', 'martes', etc.
-    horaEntrada: string;
-    horaSalida: string;
-    horaAlmuerzoInicio?: string;
-    horaAlmuerzoFin?: string;
-  }
-  
-  export interface HorarioResponse extends Horario {
-    empleadoNombre: string;
-  }
+  id?: number;
+  empleadoId: number;
+  diaSemana: string;
+  horaEntrada: string;
+  horaSalida: string;
+  horaAlmuerzoInicio?: string;
+  horaAlmuerzoFin?: string;
+  tipoDia?: string; // normal, descanso, compensado, vacaciones
+}
+
+export interface HorarioResponse extends Horario {
+  empleadoNombre: string;
+  empleadoRol?: string;
+}
+
+export interface HorarioDia {
+  id?: number;
+  horaEntrada?: string;
+  horaSalida?: string;
+  horaAlmuerzoInicio?: string;
+  horaAlmuerzoFin?: string;
+  tipoDia?: string;
+}
+
+export interface HorarioSemanal {
+  empleadoId: number;
+  empleadoNombre: string;
+  empleadoRol: string;
+  empleadoCargo: string;
+  horariosSemana: {
+    lunes?: HorarioDia;
+    martes?: HorarioDia;
+    miercoles?: HorarioDia;
+    jueves?: HorarioDia;
+    viernes?: HorarioDia;
+    sabado?: HorarioDia;
+    domingo?: HorarioDia;
+  };
+}

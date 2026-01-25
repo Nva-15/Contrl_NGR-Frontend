@@ -1,0 +1,175 @@
+.card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Tabla de horarios */
+.horarios-table {
+  table-layout: fixed;
+}
+
+.horarios-table th,
+.horarios-table td {
+  vertical-align: middle;
+}
+
+.col-empleado {
+  width: 200px;
+  min-width: 180px;
+}
+
+.col-dia {
+  width: calc((100% - 200px) / 7);
+  min-width: 100px;
+}
+
+/* Celdas de horario */
+.celda-horario {
+  padding: 0.5rem !important;
+  transition: all 0.2s ease;
+  min-height: 80px;
+}
+
+.celda-horario:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1;
+  position: relative;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Contenido de horario */
+.horario-normal {
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.hora-entrada,
+.hora-salida {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.hora-almuerzo {
+  margin-top: 4px;
+  font-size: 0.75rem;
+}
+
+.tipo-especial {
+  padding: 0.5rem;
+}
+
+.tipo-especial i {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Sin horario */
+.sin-horario {
+  background-color: #f8f9fa;
+  border: 1px dashed #dee2e6 !important;
+}
+
+.sin-horario-content {
+  padding: 0.5rem;
+  opacity: 0.6;
+}
+
+.sin-horario-content i {
+  font-size: 1.2rem;
+}
+
+/* Badges de roles */
+.badge {
+  font-weight: 500;
+  font-size: 0.7rem;
+}
+
+/* Modal */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal.show {
+  display: block;
+}
+
+/* Form */
+.form-label {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.875rem;
+}
+
+input[type="time"] {
+  padding: 0.5rem 0.75rem;
+}
+
+/* Leyenda */
+.border-dashed {
+  border-style: dashed !important;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .col-empleado {
+    width: 160px;
+    min-width: 140px;
+  }
+
+  .col-dia {
+    min-width: 80px;
+  }
+
+  .horario-normal {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .horarios-table {
+    font-size: 0.8rem;
+  }
+
+  .col-empleado {
+    width: 140px;
+    min-width: 120px;
+  }
+
+  .col-dia {
+    min-width: 70px;
+  }
+
+  .celda-horario {
+    padding: 0.25rem !important;
+  }
+
+  .hora-almuerzo {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .horarios-table {
+    font-size: 0.7rem;
+  }
+
+  .col-empleado {
+    width: 120px;
+    min-width: 100px;
+  }
+
+  .col-dia {
+    min-width: 60px;
+  }
+
+  .tipo-especial i {
+    font-size: 1rem;
+  }
+}
