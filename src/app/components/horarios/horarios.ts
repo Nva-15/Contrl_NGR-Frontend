@@ -73,12 +73,17 @@ export class HorariosComponent implements OnInit {
   }
 
   ngOnInit() {
+    const rol = this.authService.getUserRole();
+    if (rol === 'tecnico' || rol === 'hd' || rol === 'noc') {
+      this.filtroRol = rol;
+    }
     this.cargarDatos();
   }
 
   initForm(): FormGroup {
     return this.fb.group({
       tipoDia: ['normal', Validators.required],
+      turno: ['manana'],
       horaEntrada: ['08:00'],
       horaSalida: ['17:00'],
       horaAlmuerzoInicio: ['12:00'],
@@ -261,6 +266,7 @@ export class HorariosComponent implements OnInit {
     if (this.horarioActual) {
       this.horarioForm.patchValue({
         tipoDia: this.horarioActual.tipoDia || 'normal',
+        turno: this.horarioActual.turno || 'manana',
         horaEntrada: this.horarioActual.horaEntrada || '08:00',
         horaSalida: this.horarioActual.horaSalida || '17:00',
         horaAlmuerzoInicio: this.horarioActual.horaAlmuerzoInicio || '12:00',
@@ -269,6 +275,7 @@ export class HorariosComponent implements OnInit {
     } else {
       this.horarioForm.reset({
         tipoDia: 'normal',
+        turno: 'manana',
         horaEntrada: '08:00',
         horaSalida: '17:00',
         horaAlmuerzoInicio: '12:00',
@@ -300,15 +307,22 @@ export class HorariosComponent implements OnInit {
     this.isLoading = true;
 
     const payload: any = {
-      tipoDia: formValue.tipoDia
+      tipoDia: formValue.tipoDia,
+      turno: formValue.turno || 'manana'
     };
 
     // Solo enviar horas si el tipo es normal
     if (formValue.tipoDia === 'normal') {
       payload.horaEntrada = formValue.horaEntrada;
       payload.horaSalida = formValue.horaSalida;
-      payload.horaAlmuerzoInicio = formValue.horaAlmuerzoInicio;
-      payload.horaAlmuerzoFin = formValue.horaAlmuerzoFin;
+      // Turno tarde no tiene refrigerio
+      if (formValue.turno === 'tarde') {
+        payload.horaAlmuerzoInicio = null;
+        payload.horaAlmuerzoFin = null;
+      } else {
+        payload.horaAlmuerzoInicio = formValue.horaAlmuerzoInicio;
+        payload.horaAlmuerzoFin = formValue.horaAlmuerzoFin;
+      }
     } else {
       payload.horaEntrada = null;
       payload.horaSalida = null;
@@ -374,6 +388,39 @@ export class HorariosComponent implements OnInit {
         horaAlmuerzoFin: ''
       });
     } else {
+      const turno = this.horarioForm.get('turno')?.value;
+      if (turno === 'tarde') {
+        this.horarioForm.patchValue({
+          horaEntrada: '14:00',
+          horaSalida: '22:00',
+          horaAlmuerzoInicio: '',
+          horaAlmuerzoFin: ''
+        });
+      } else {
+        this.horarioForm.patchValue({
+          horaEntrada: '08:00',
+          horaSalida: '17:00',
+          horaAlmuerzoInicio: '12:00',
+          horaAlmuerzoFin: '13:00'
+        });
+      }
+    }
+  }
+
+  onTurnoChange() {
+    const turno = this.horarioForm.get('turno')?.value;
+    const tipoDia = this.horarioForm.get('tipoDia')?.value;
+
+    if (tipoDia !== 'normal') return;
+
+    if (turno === 'tarde') {
+      this.horarioForm.patchValue({
+        horaEntrada: '14:00',
+        horaSalida: '22:00',
+        horaAlmuerzoInicio: '',
+        horaAlmuerzoFin: ''
+      });
+    } else {
       this.horarioForm.patchValue({
         horaEntrada: '08:00',
         horaSalida: '17:00',
@@ -381,6 +428,10 @@ export class HorariosComponent implements OnInit {
         horaAlmuerzoFin: '13:00'
       });
     }
+  }
+
+  esTurnoTarde(): boolean {
+    return this.horarioForm.get('turno')?.value === 'tarde';
   }
 
   tienePermiso(): boolean {

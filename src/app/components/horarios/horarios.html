@@ -94,6 +94,15 @@
                 <ng-container *ngIf="getHorarioDia(empleado, dia) as horario">
                   <!-- Horario normal -->
                   <div *ngIf="horario.tipoDia === 'normal' || !horario.tipoDia" class="horario-normal">
+                    <div class="turno-badge mb-1" *ngIf="horario.turno">
+                      <span class="badge" style="font-size:0.65rem"
+                            [class.bg-warning]="horario.turno === 'manana'"
+                            [class.text-dark]="horario.turno === 'manana'"
+                            [class.bg-info]="horario.turno === 'tarde'">
+                        <i class="bi" [class.bi-sunrise]="horario.turno === 'manana'" [class.bi-sunset]="horario.turno === 'tarde'"></i>
+                        {{ horario.turno === 'manana' ? 'Mañana' : 'Tarde' }}
+                      </span>
+                    </div>
                     <div class="hora-entrada">
                       <i class="bi bi-box-arrow-in-right text-success"></i>
                       {{ horario.horaEntrada }}
@@ -179,6 +188,25 @@
 
           <!-- Horas (solo si es normal) -->
           <div *ngIf="horarioForm.get('tipoDia')?.value === 'normal'">
+
+            <!-- Selector de turno -->
+            <div class="mb-3">
+              <label class="form-label">Turno</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" formControlName="turno"
+                       value="manana" id="turnoManana" (change)="onTurnoChange()">
+                <label class="btn btn-outline-warning" for="turnoManana">
+                  <i class="bi bi-sunrise me-1"></i> Mañana
+                </label>
+
+                <input type="radio" class="btn-check" formControlName="turno"
+                       value="tarde" id="turnoTarde" (change)="onTurnoChange()">
+                <label class="btn btn-outline-info" for="turnoTarde">
+                  <i class="bi bi-sunset me-1"></i> Tarde
+                </label>
+              </div>
+            </div>
+
             <div class="row g-3">
               <div class="col-6">
                 <label class="form-label">Hora Entrada</label>
@@ -190,20 +218,29 @@
               </div>
             </div>
 
-            <hr class="my-3">
-            <h6 class="text-muted mb-3">
-              <i class="bi bi-cup-hot me-1"></i> Horario de Almuerzo (1 hora)
-            </h6>
+            <!-- Almuerzo solo para turno mañana -->
+            <div *ngIf="!esTurnoTarde()">
+              <hr class="my-3">
+              <h6 class="text-muted mb-3">
+                <i class="bi bi-cup-hot me-1"></i> Horario de Almuerzo (1 hora)
+              </h6>
 
-            <div class="row g-3">
-              <div class="col-6">
-                <label class="form-label">Inicio</label>
-                <input type="time" class="form-control" formControlName="horaAlmuerzoInicio">
+              <div class="row g-3">
+                <div class="col-6">
+                  <label class="form-label">Inicio</label>
+                  <input type="time" class="form-control" formControlName="horaAlmuerzoInicio">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Fin</label>
+                  <input type="time" class="form-control" formControlName="horaAlmuerzoFin">
+                </div>
               </div>
-              <div class="col-6">
-                <label class="form-label">Fin</label>
-                <input type="time" class="form-control" formControlName="horaAlmuerzoFin">
-              </div>
+            </div>
+
+            <!-- Mensaje turno tarde -->
+            <div *ngIf="esTurnoTarde()" class="alert alert-info mt-3 py-2 small">
+              <i class="bi bi-info-circle me-1"></i>
+              El turno tarde no incluye horario de refrigerio.
             </div>
           </div>
 

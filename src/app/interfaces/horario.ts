@@ -7,6 +7,7 @@ export interface Horario {
   horaAlmuerzoInicio?: string;
   horaAlmuerzoFin?: string;
   tipoDia?: string; // normal, descanso, compensado, vacaciones
+  turno?: string; // manana, tarde
 }
 
 export interface HorarioResponse extends Horario {
@@ -21,6 +22,7 @@ export interface HorarioDia {
   horaAlmuerzoInicio?: string;
   horaAlmuerzoFin?: string;
   tipoDia?: string;
+  turno?: string; // manana, tarde
 }
 
 export interface HorarioSemanal {
