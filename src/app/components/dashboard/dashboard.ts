@@ -6,6 +6,8 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth';
 import { AsistenciaService } from '../../services/asistencia';
 import { EmpleadosService } from '../../services/empleados';
+import { HorariosService } from '../../services/horarios';
+import { HorarioSemanal, HorarioDia } from '../../interfaces/horario';
 
 @Component({
   selector: 'app-dashboard',
@@ -20,6 +22,7 @@ export class DashboardComponent implements OnInit {
   private auth = inject(AuthService);
   private asistenciaService = inject(AsistenciaService);
   private empleadosService = inject(EmpleadosService);
+  private horariosService = inject(HorariosService);
   private http = inject(HttpClient);
   private router = inject(Router);
 
@@ -51,6 +54,15 @@ export class DashboardComponent implements OnInit {
   passwordNueva = '';
   passwordConfirmar = '';
 
+  // Horario semanal del empleado
+  horarioSemanal: HorarioSemanal | null = null;
+  isLoadingHorario = false;
+  diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+  diasLabels: { [key: string]: string } = {
+    'lunes': 'Lun', 'martes': 'Mar', 'miercoles': 'Mié',
+    'jueves': 'Jue', 'viernes': 'Vie', 'sabado': 'Sáb', 'domingo': 'Dom'
+  };
+
   ngOnInit() {
     this.currentEmpleado = this.auth.getCurrentEmpleado();
     
@@ -61,11 +73,12 @@ export class DashboardComponent implements OnInit {
 
     // Generar URL de foto de perfil
     this.fotoUrl = this.getFotoUrl(
-      this.currentEmpleado.foto, 
+      this.currentEmpleado.foto,
       this.currentEmpleado.nombre
     );
-    
+
     this.cargarAsistencia();
+    this.cargarHorario();
   }
 
   private getFotoUrl(fotoPath: string | undefined, nombre: string): string {
@@ -371,6 +384,46 @@ export class DashboardComponent implements OnInit {
       case 'noc': return 'NOC';
       default: return nivel || 'Sin nivel';
     }
+  }
+
+  // ========== HORARIO SEMANAL ==========
+
+  cargarHorario() {
+    if (!this.currentEmpleado?.id) return;
+    // Admin no tiene horarios
+    if (this.currentEmpleado.rol === 'admin') return;
+
+    this.isLoadingHorario = true;
+    this.horariosService.getHorarioSemanalEmpleado(this.currentEmpleado.id).subscribe({
+      next: (data) => {
+        this.horarioSemanal = data;
+        this.isLoadingHorario = false;
+      },
+      error: () => {
+        this.isLoadingHorario = false;
+        this.horarioSemanal = null;
+      }
+    });
+  }
+
+  getHorarioDia(dia: string): HorarioDia | null {
+    if (!this.horarioSemanal) return null;
+    const horarios = this.horarioSemanal.horariosSemana as any;
+    return horarios[dia] || null;
+  }
+
+  getTipoDiaLabel(tipo: string | undefined): string {
+    switch (tipo) {
+      case 'descanso': return 'Descanso';
+      case 'compensado': return 'Compensado';
+      case 'vacaciones': return 'Vacaciones';
+      default: return 'Normal';
+    }
+  }
+
+  tieneHorarioAsignado(): boolean {
+    if (!this.horarioSemanal) return false;
+    return this.diasSemana.some(dia => this.getHorarioDia(dia) !== null);
   }
 
   getRolDisplay(rol: string): string {

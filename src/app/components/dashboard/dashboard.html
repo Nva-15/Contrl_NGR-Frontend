@@ -266,6 +266,74 @@
 
   </div>
 
+    <!-- Horario Semanal del empleado -->
+    <div class="row g-4 mt-2" *ngIf="currentEmpleado?.rol !== 'admin'">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 text-primary">
+              <i class="bi bi-calendar-week me-2"></i>Mi Horario Semanal
+            </h6>
+            <a routerLink="/horarios" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-eye me-1"></i>Ver todos
+            </a>
+          </div>
+          <div class="card-body">
+            <!-- Loading -->
+            <div *ngIf="isLoadingHorario" class="text-center py-3">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              <small class="text-muted ms-2">Cargando horario...</small>
+            </div>
+
+            <!-- Sin horario asignado -->
+            <div *ngIf="!isLoadingHorario && !tieneHorarioAsignado()" class="text-center py-3">
+              <i class="bi bi-calendar-x text-muted" style="font-size: 2rem;"></i>
+              <p class="text-muted mt-2 mb-0">No tienes horario asignado</p>
+            </div>
+
+            <!-- Tabla de horario -->
+            <div *ngIf="!isLoadingHorario && tieneHorarioAsignado()" class="table-responsive">
+              <table class="table table-bordered table-sm mb-0 text-center">
+                <thead class="table-light">
+                  <tr>
+                    <th *ngFor="let dia of diasSemana" class="fw-bold" style="font-size: 0.8rem;">
+                      {{ diasLabels[dia] }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td *ngFor="let dia of diasSemana" style="font-size: 0.8rem; vertical-align: middle;">
+                      <ng-container *ngIf="getHorarioDia(dia) as horario">
+                        <div *ngIf="horario.tipoDia === 'normal' || !horario.tipoDia">
+                          <div class="text-success fw-bold">{{ horario.horaEntrada }}</div>
+                          <div class="text-danger fw-bold">{{ horario.horaSalida }}</div>
+                          <div *ngIf="horario.horaAlmuerzoInicio" class="text-muted" style="font-size: 0.7rem;">
+                            <i class="bi bi-cup-hot"></i> {{ horario.horaAlmuerzoInicio }}-{{ horario.horaAlmuerzoFin }}
+                          </div>
+                        </div>
+                        <div *ngIf="horario.tipoDia && horario.tipoDia !== 'normal'">
+                          <span class="badge"
+                                [class.bg-secondary]="horario.tipoDia === 'descanso'"
+                                [class.bg-info]="horario.tipoDia === 'compensado'"
+                                [class.bg-warning]="horario.tipoDia === 'vacaciones'"
+                                [class.text-dark]="horario.tipoDia === 'vacaciones'"
+                                style="font-size: 0.7rem;">
+                            {{ getTipoDiaLabel(horario.tipoDia) }}
+                          </span>
+                        </div>
+                      </ng-container>
+                      <span *ngIf="!getHorarioDia(dia)" class="text-muted" style="font-size: 0.75rem;">--</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   <footer class="mt-5 py-3 bg-light border-top">
     <div class="container">
       <div class="row">

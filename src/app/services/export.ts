@@ -14,6 +14,8 @@ interface ExportOptions {
   title?: string;
   orientation?: 'portrait' | 'landscape';
   filename?: string;
+  fontSize?: number;
+  autoColumnWidth?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -44,40 +46,50 @@ export class ExportService {
     const config = {
       title: options.title || 'Reporte',
       orientation: options.orientation || 'landscape',
-      filename: options.filename || 'reporte'
+      filename: options.filename || 'reporte',
+      fontSize: options.fontSize || 8,
+      autoColumnWidth: options.autoColumnWidth ?? false
     };
 
     const doc = new jsPDF(config.orientation, 'mm', 'a4');
-    
-    doc.setFontSize(16);
+
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(config.title, 14, 15);
-    
-    doc.setFontSize(10);
+    doc.text(config.title, 10, 12);
+
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Generado: ${new Date().toLocaleDateString()}`, 14, 22);
-    
-    const bodyData = data.map(item => 
+    doc.text(`Generado: ${new Date().toLocaleDateString()}`, 10, 18);
+
+    const bodyData = data.map(item =>
       columns.map(col => item[col.dataKey] ?? '')
     );
 
     const headers = columns.map(col => col.header);
-    const columnWidths = columns.map(col => col.width || this.calcWidth(col.header, data, col.dataKey));
 
-    autoTable(doc, {
-      startY: 30,
+    // Configurar estilos de columnas
+    const tableConfig: any = {
+      startY: 23,
       head: [headers],
       body: bodyData,
       theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: config.fontSize, cellPadding: 1.5, overflow: 'linebreak' },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold', fontSize: config.fontSize },
       alternateRowStyles: { fillColor: [245, 245, 245] },
-      columnStyles: columns.reduce((acc, _, idx) => {
+      margin: { left: 8, right: 8 },
+      tableWidth: 'auto'
+    };
+
+    // Si no es auto, calcular anchos manuales
+    if (!config.autoColumnWidth) {
+      const columnWidths = columns.map(col => col.width || this.calcWidth(col.header, data, col.dataKey));
+      tableConfig.columnStyles = columns.reduce((acc: any, _, idx) => {
         acc[idx] = { cellWidth: columnWidths[idx] };
         return acc;
-      }, {} as any),
-      margin: { horizontal: 14 }
-    });
+      }, {} as any);
+    }
+
+    autoTable(doc, tableConfig);
 
     doc.save(`${config.filename}.pdf`);
   }

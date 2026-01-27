@@ -77,6 +77,20 @@ export class HorariosService {
     );
   }
 
+  // Obtener horario semanal consolidado de un empleado individual
+  getHorarioSemanalEmpleado(empleadoId: number): Observable<HorarioSemanal> {
+    return this.http.get<HorarioSemanal>(`${this.apiUrl}/empleado/${empleadoId}/semanal`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // Aplicar el mismo horario a multiples dias
+  aplicarHorarioMultiplesDias(empleadoId: number, datos: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/empleado/${empleadoId}/dias-multiples`, datos).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'Error desconocido';
     if (error.error?.error) {

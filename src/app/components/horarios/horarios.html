@@ -8,6 +8,15 @@
       </h2>
       <p class="text-muted mb-0">Vista consolidada de horarios de todos los empleados</p>
     </div>
+    <!-- Botones de exportar -->
+    <div class="d-flex gap-2">
+      <button class="btn btn-success btn-sm" (click)="exportarExcel()" [disabled]="horariosFiltrados.length === 0">
+        <i class="bi bi-file-earmark-excel me-1"></i> Excel
+      </button>
+      <button class="btn btn-danger btn-sm" (click)="exportarPdf()" [disabled]="horariosFiltrados.length === 0">
+        <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+      </button>
+    </div>
   </div>
 
   <!-- Filtros -->
@@ -205,13 +214,45 @@
             y no tendra horario laboral.
           </div>
         </form>
+
+        <!-- Aplicar a otros dias -->
+        <hr class="my-3">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="aplicarOtrosDias"
+                 [(ngModel)]="aplicarAOtrosDias">
+          <label class="form-check-label fw-bold" for="aplicarOtrosDias">
+            <i class="bi bi-calendar-range me-1"></i>
+            Aplicar este mismo horario a otros dias
+          </label>
+        </div>
+
+        <div *ngIf="aplicarAOtrosDias" class="ms-4 mt-2">
+          <div class="row g-2">
+            <div class="col-auto" *ngFor="let dia of diasSemana">
+              <div class="form-check" *ngIf="dia !== diaEditando">
+                <input class="form-check-input" type="checkbox"
+                       [id]="'dia-' + dia"
+                       [(ngModel)]="diasSeleccionados[dia]">
+                <label class="form-check-label" [for]="'dia-' + dia">
+                  {{ diasLabels[dia] }}
+                </label>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="getDiasParaAplicar().length > 0" class="alert alert-warning mt-2 py-2 small">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Se aplicara a: <strong>{{ diasLabels[diaEditando] }}</strong>
+            <span *ngFor="let d of getDiasParaAplicar()">, <strong>{{ diasLabels[d] }}</strong></span>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
           Cancelar
         </button>
         <button type="button" class="btn btn-primary" (click)="guardarHorario()" [disabled]="isLoading">
-          <i class="bi bi-check-lg me-1"></i> Guardar
+          <i class="bi bi-check-lg me-1"></i>
+          {{ getDiasParaAplicar().length > 0 ? 'Aplicar a ' + (getDiasParaAplicar().length + 1) + ' dias' : 'Guardar' }}
         </button>
       </div>
     </div>
