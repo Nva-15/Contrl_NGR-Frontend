@@ -7,6 +7,7 @@ import { MainLayoutComponent } from './layouts/main-layout/main-layout';
 import { EmpleadosComponent } from './components/empleados/empleados';
 import { OrganigramaComponent } from './components/organigrama/organigrama';
 import { HorariosComponent } from './components/horarios/horarios';
+import { ReportesComponent } from './components/reportes/reportes';
 
 export const routes: Routes = [
   { 
@@ -48,6 +49,11 @@ export const routes: Routes = [
         path: 'horarios',
         component: HorariosComponent,
         title: 'Gestion de Horarios'
+      },
+      {
+        path: 'reportes',
+        component: ReportesComponent,
+        title: 'Reportes de Asistencia'
       },
     ]
   },

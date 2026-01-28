@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AsistenciaRequest, AsistenciaResponse } from '../interfaces/asistencia';
+import { AsistenciaRequest, AsistenciaResponse, ReporteAsistencia } from '../interfaces/asistencia';
 
 @Injectable({
   providedIn: 'root'
@@ -43,5 +43,11 @@ export class AsistenciaService {
 
   verificarSalidasAutomaticas(): Observable<any> {
     return this.http.post(`${this.apiUrl}/verificar-salidas`, {});
+  }
+
+  getReporteAsistencia(inicio: string, fin: string): Observable<ReporteAsistencia[]> {
+    return this.http.get<ReporteAsistencia[]>(
+      `${this.apiUrl}/reporte/rango?inicio=${inicio}&fin=${fin}`
+    );
   }
 }

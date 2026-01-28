@@ -17,3 +17,22 @@ export interface AsistenciaRequest {
     observaciones: string;
     salidaAutomatica: boolean;
   }
+
+  export interface ReporteAsistencia {
+    empleadoId: number;
+    empleadoNombre: string;
+    empleadoRol: string;
+    empleadoCargo: string;
+    fecha: string;
+    diaSemana: string;
+    horarioEntrada: string | null;
+    horaEntradaReal: string | null;
+    horarioSalida: string | null;
+    horaSalidaReal: string | null;
+    estado: string;
+    minutosRetraso: number | null;
+    tipoDia: string | null;
+    turno: string | null;
+    observaciones: string | null;
+    salidaAutomatica: boolean | null;
+  }
