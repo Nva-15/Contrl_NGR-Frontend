@@ -93,6 +93,19 @@
     </div>
   </div>
 
+  <!-- Alerta para horarios no oficiales (solo admin/supervisor) -->
+  <div *ngIf="semanaSeleccionada && semanaSeleccionada.estado !== 'activo' && tienePermiso()"
+       class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+    <div>
+      <strong>Horario no oficial:</strong>
+      Este horario está en estado <strong>{{ semanaSeleccionada.estado | titlecase }}</strong> y no es visible para los empleados.
+      <span *ngIf="semanaSeleccionada.estado === 'borrador'">
+        Cambia el estado a <strong>Activo</strong> para que sea el horario oficial.
+      </span>
+    </div>
+  </div>
+
   <!-- Sin semanas -->
   <div *ngIf="!isLoading && semanasDisponibles.length === 0" class="text-center py-5">
     <i class="bi bi-calendar-x display-1 text-muted"></i>

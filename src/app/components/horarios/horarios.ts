@@ -148,13 +148,15 @@ export class HorariosComponent implements OnInit {
     this.isLoading = true;
     this.horariosService.getSemanasHorarios().subscribe({
       next: (semanas) => {
-        this.semanasDisponibles = semanas;
+        // Filtrar semanas según el rol del usuario y fechas
+        this.semanasDisponibles = this.filtrarSemanasVisibles(semanas);
+
         // Si hay semana vigente, seleccionarla
-        const vigente = semanas.find(s => s.esSemanaActual);
+        const vigente = this.semanasDisponibles.find(s => s.esSemanaActual);
         if (vigente) {
           this.seleccionarSemana(vigente.id);
-        } else if (semanas.length > 0) {
-          this.seleccionarSemana(semanas[0].id);
+        } else if (this.semanasDisponibles.length > 0) {
+          this.seleccionarSemana(this.semanasDisponibles[0].id);
         } else {
           this.isLoading = false;
         }
@@ -163,6 +165,35 @@ export class HorariosComponent implements OnInit {
         this.notification.error('Error al cargar semanas', 'Error');
         this.isLoading = false;
       }
+    });
+  }
+
+  // Filtrar semanas visibles según rol y fechas
+  filtrarSemanasVisibles(semanas: HorarioSemanalResponse[]): HorarioSemanalResponse[] {
+    const rol = this.authService.getUserRole();
+    const esRolBasico = ['tecnico', 'hd', 'noc'].includes(rol);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    // Calcular el inicio de la semana actual (lunes)
+    const inicioSemanaActual = this.getLunesDeSemana(hoy);
+
+    // Calcular el inicio de la semana anterior
+    const inicioSemanaAnterior = new Date(inicioSemanaActual);
+    inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 7);
+
+    return semanas.filter(semana => {
+      // Para roles básicos (tecnico, hd, noc): solo mostrar horarios activos
+      if (esRolBasico && semana.estado !== 'activo') {
+        return false;
+      }
+
+      // Filtrar por fechas: mostrar semana anterior, actual y futuras
+      const fechaInicioSemana = new Date(semana.fechaInicio);
+      fechaInicioSemana.setHours(0, 0, 0, 0);
+
+      // Permitir: semana anterior (solo una), semana actual y futuras
+      return fechaInicioSemana >= inicioSemanaAnterior;
     });
   }
 
