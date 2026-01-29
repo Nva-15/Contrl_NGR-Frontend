@@ -626,41 +626,42 @@ export class SolicitudesComponent implements OnInit {
   private getColumnasExportacion(): any[] {
     if (this.activeTab === 'mis-solicitudes') {
       return [
-        { header: 'ID', dataKey: 'id' },
-        { header: 'Tipo', dataKey: 'tipo' },
-        { header: 'Fecha Solicitud', dataKey: 'fechaSolicitud' },
-        { header: 'Fecha Inicio', dataKey: 'fechaInicio' },
-        { header: 'Fecha Fin', dataKey: 'fechaFin' },
-        { header: 'Días', dataKey: 'dias' },
-        { header: 'Estado', dataKey: 'estado' },
-        { header: 'Aprobado Por', dataKey: 'aprobadoPor' },
-        { header: 'Fecha Aprobación', dataKey: 'fechaAprobacion' }
+        { header: 'ID', dataKey: 'id', width: 10 },
+        { header: 'Tipo', dataKey: 'tipo', width: 25 },
+        { header: 'F. Solicitud', dataKey: 'fechaSolicitud', width: 28 },
+        { header: 'Inicio', dataKey: 'fechaInicio', width: 25 },
+        { header: 'Fin', dataKey: 'fechaFin', width: 25 },
+        { header: 'Días', dataKey: 'dias', width: 12 },
+        { header: 'Estado', dataKey: 'estado', width: 22 },
+        { header: 'Aprobó', dataKey: 'aprobadoPor', width: 35 },
+        { header: 'F. Aprobación', dataKey: 'fechaAprobacion', width: 28 }
       ];
     } else if (this.activeTab === 'aprobar') {
       return [
-        { header: 'ID', dataKey: 'id' },
-        { header: 'Empleado', dataKey: 'empleadoNombre' },
-        { header: 'Rol', dataKey: 'rol' },
-        { header: 'Tipo', dataKey: 'tipo' },
-        { header: 'Fecha Inicio', dataKey: 'fechaInicio' },
-        { header: 'Fecha Fin', dataKey: 'fechaFin' },
-        { header: 'Días', dataKey: 'dias' },
-        { header: 'Fecha Solicitud', dataKey: 'fechaSolicitud' },
-        { header: 'Motivo', dataKey: 'motivo' }
+        { header: 'ID', dataKey: 'id', width: 10 },
+        { header: 'Empleado', dataKey: 'empleadoNombre', width: 40 },
+        { header: 'Rol', dataKey: 'rol', width: 20 },
+        { header: 'Tipo', dataKey: 'tipo', width: 25 },
+        { header: 'Inicio', dataKey: 'fechaInicio', width: 25 },
+        { header: 'Fin', dataKey: 'fechaFin', width: 25 },
+        { header: 'Días', dataKey: 'dias', width: 12 },
+        { header: 'F. Solicitud', dataKey: 'fechaSolicitud', width: 28 },
+        { header: 'Motivo', dataKey: 'motivo', width: 50 }
       ];
     } else {
+      // Historial - usar headers cortos para que quepan todas las columnas
       return [
-        { header: 'ID', dataKey: 'id' },
-        { header: 'Empleado', dataKey: 'empleadoNombre' },
-        { header: 'Rol', dataKey: 'rol' },
-        { header: 'Tipo', dataKey: 'tipo' },
-        { header: 'Fecha Inicio', dataKey: 'fechaInicio' },
-        { header: 'Fecha Fin', dataKey: 'fechaFin' },
-        { header: 'Días', dataKey: 'dias' },
-        { header: 'Estado', dataKey: 'estado' },
-        { header: 'Aprobado Por', dataKey: 'aprobadoPor' },
-        { header: 'Fecha Solicitud', dataKey: 'fechaSolicitud' },
-        { header: 'Fecha Aprobación', dataKey: 'fechaAprobacion' }
+        { header: 'ID', dataKey: 'id', width: 8 },
+        { header: 'Empleado', dataKey: 'empleadoNombre', width: 35 },
+        { header: 'Rol', dataKey: 'rol', width: 18 },
+        { header: 'Tipo', dataKey: 'tipo', width: 22 },
+        { header: 'Inicio', dataKey: 'fechaInicio', width: 22 },
+        { header: 'Fin', dataKey: 'fechaFin', width: 22 },
+        { header: 'Días', dataKey: 'dias', width: 10 },
+        { header: 'Estado', dataKey: 'estado', width: 18 },
+        { header: 'Aprobó', dataKey: 'aprobadoPor', width: 30 },
+        { header: 'F. Solicitud', dataKey: 'fechaSolicitud', width: 25 },
+        { header: 'F. Aprobación', dataKey: 'fechaAprobacion', width: 25 }
       ];
     }
   }
@@ -686,19 +687,55 @@ export class SolicitudesComponent implements OnInit {
       const empleado = this.todosEmpleados.find(e => e.id === sol.empleadoId);
       return {
         id: sol.id || '',
-        empleadoNombre: sol.empleadoNombre || '',
-        rol: empleado?.rol || '',
-        tipo: sol.tipo || '',
+        empleadoNombre: this.truncarTexto(sol.empleadoNombre || '', 25),
+        rol: this.formatRolExport(empleado?.rol || ''),
+        tipo: this.formatTipoExport(sol.tipo || ''),
         fechaInicio: this.formatFechaExport(sol.fechaInicio || ''),
         fechaFin: this.formatFechaExport(sol.fechaFin || ''),
         dias: this.calcularDias(sol.fechaInicio || '', sol.fechaFin || ''),
-        estado: sol.estado || '',
-        aprobadoPor: sol.aprobadoPor || (sol.nombreAprobador || 'Pendiente'),
-        fechaSolicitud: this.formatFechaHora(sol.fechaSolicitud || ''),
-        fechaAprobacion: this.formatFechaHora(sol.fechaAprobacion || ''),
-        motivo: sol.motivo || ''
+        estado: this.formatEstadoExport(sol.estado || ''),
+        aprobadoPor: this.truncarTexto(String(sol.aprobadoPor || sol.nombreAprobador || 'Pendiente'), 20),
+        fechaSolicitud: this.formatFechaExport(sol.fechaSolicitud || ''),
+        fechaAprobacion: this.formatFechaExport(sol.fechaAprobacion || ''),
+        motivo: this.truncarTexto(sol.motivo || '', 40)
       };
     });
+  }
+
+  private truncarTexto(texto: string, maxLength: number): string {
+    if (!texto) return '';
+    return texto.length > maxLength ? texto.substring(0, maxLength) + '...' : texto;
+  }
+
+  private formatRolExport(rol: string): string {
+    const roles: { [key: string]: string } = {
+      'admin': 'Admin',
+      'supervisor': 'Supervisor',
+      'tecnico': 'Técnico',
+      'hd': 'HD',
+      'noc': 'NOC'
+    };
+    return roles[rol?.toLowerCase()] || rol;
+  }
+
+  private formatTipoExport(tipo: string): string {
+    const tipos: { [key: string]: string } = {
+      'vacaciones': 'Vacaciones',
+      'permiso': 'Permiso',
+      'descanso': 'Descanso',
+      'compensacion': 'Compensación',
+      'licencia': 'Licencia'
+    };
+    return tipos[tipo?.toLowerCase()] || tipo;
+  }
+
+  private formatEstadoExport(estado: string): string {
+    const estados: { [key: string]: string } = {
+      'pendiente': 'Pendiente',
+      'aprobado': 'Aprobado',
+      'rechazado': 'Rechazado'
+    };
+    return estados[estado?.toLowerCase()] || estado;
   }
 
   private getNombreArchivoExportacion(): string {

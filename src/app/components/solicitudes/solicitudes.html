@@ -693,17 +693,19 @@
               </td>
               <td class="text-center">
                 <div class="btn-group btn-group-sm" *ngIf="puedeCorregirEstado(sol)">
+                  <!-- Si está rechazado, mostrar botón para cambiar a aprobado -->
                   <button class="btn btn-outline-success btn-sm"
                           *ngIf="sol.estado === 'rechazado'"
                           (click)="corregirEstado(sol.id!, 'aprobado')"
                           title="Cambiar a Aprobado">
-                    <i class="bi bi-check-lg"></i>
+                    <i class="bi bi-check-lg"></i> Aprobar
                   </button>
+                  <!-- Si está aprobado, mostrar botón para cambiar a rechazado -->
                   <button class="btn btn-outline-danger btn-sm"
                           *ngIf="sol.estado === 'aprobado'"
                           (click)="corregirEstado(sol.id!, 'rechazado')"
                           title="Cambiar a Rechazado">
-                    <i class="bi bi-x-lg"></i>
+                    <i class="bi bi-x-lg"></i> Rechazar
                   </button>
                 </div>
                 <span *ngIf="!puedeCorregirEstado(sol)" class="text-muted small">—</span>

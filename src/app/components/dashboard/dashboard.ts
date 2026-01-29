@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth';
 import { AsistenciaService } from '../../services/asistencia';
 import { EmpleadosService } from '../../services/empleados';
 import { HorariosService } from '../../services/horarios';
+import { NotificationService } from '../../services/notification.service';
 import { HorarioSemanal, HorarioDia } from '../../interfaces/horario';
 
 @Component({
@@ -23,6 +24,7 @@ export class DashboardComponent implements OnInit {
   private asistenciaService = inject(AsistenciaService);
   private empleadosService = inject(EmpleadosService);
   private horariosService = inject(HorariosService);
+  private notification = inject(NotificationService);
   private http = inject(HttpClient);
   private router = inject(Router);
 
@@ -124,8 +126,37 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  marcarAsistencia() {
+  async marcarAsistencia() {
     if (!this.currentEmpleado) return;
+
+    // Obtener fecha y hora actual formateada
+    const ahora = new Date();
+    const fechaFormateada = ahora.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const horaFormateada = ahora.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Determinar tipo de marcaje
+    const esMarcajeEntrada = this.tipoMarcaje === 'entrada';
+    const tipoTexto = esMarcajeEntrada ? 'ENTRADA' : 'SALIDA';
+    const icono = esMarcajeEntrada ? '🟢' : '🔴';
+
+    // Mostrar confirmación flotante
+    const confirmado = await this.notification.confirm({
+      title: `Confirmar Marcaje de ${tipoTexto}`,
+      message: `${icono} ¿Desea registrar su ${tipoTexto.toLowerCase()}?\n\n📅 ${fechaFormateada}\n🕐 ${horaFormateada}`,
+      confirmText: `Marcar ${tipoTexto}`,
+      cancelText: 'Cancelar',
+      type: esMarcajeEntrada ? 'success' : 'danger'
+    });
+
+    if (!confirmado) return;
 
     const req = {
       empleadoId: this.currentEmpleado.id,
@@ -136,14 +167,29 @@ export class DashboardComponent implements OnInit {
     this.asistenciaService.registrarAsistencia(req).subscribe({
       next: (res: any) => {
         const hora = this.tipoMarcaje === 'entrada' ? res.horaEntrada : res.horaSalida;
-        alert(`✅ Registrado: ${hora}`);
+        const horaCorta = hora ? hora.substring(0, 5) : horaFormateada;
+
+        if (esMarcajeEntrada) {
+          this.notification.success(
+            `Entrada registrada a las ${horaCorta}`,
+            '¡Buen día de trabajo!'
+          );
+        } else {
+          this.notification.success(
+            `Salida registrada a las ${horaCorta}`,
+            '¡Hasta pronto!'
+          );
+        }
+
         this.observaciones = '';
-        this.cargarAsistencia(); // Actualizar botones
+        this.cargarAsistencia();
       },
       error: (e: any) => {
-        // Error desde backend (ej. ya marcó entrada)
-        alert(`⚠️ ${e.error?.error || 'Error al registrar'}`);
-        this.cargarAsistencia(); 
+        this.notification.error(
+          e.error?.error || 'Error al registrar asistencia',
+          'Error de marcaje'
+        );
+        this.cargarAsistencia();
       }
     });
   }
