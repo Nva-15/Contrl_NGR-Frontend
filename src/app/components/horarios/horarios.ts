@@ -5,7 +5,14 @@ import { HorariosService } from '../../services/horarios';
 import { AuthService } from '../../services/auth';
 import { NotificationService } from '../../services/notification.service';
 import { ExportService } from '../../services/export';
-import { HorarioSemanal, HorarioDia } from '../../interfaces/horario';
+import {
+  HorarioSemanal,
+  HorarioDia,
+  HorarioSemanalResponse,
+  EmpleadoHorarioSemanal,
+  DetalleHorarioDia,
+  HorarioSemanalRequest
+} from '../../interfaces/horario';
 
 @Component({
   selector: 'app-horarios',
@@ -22,7 +29,17 @@ export class HorariosComponent implements OnInit {
   private exportService = inject(ExportService);
 
   horarioForm: FormGroup;
+  semanaForm: FormGroup;
 
+  // Vista actual: 'fechas' (nuevo) o 'clasico' (antiguo)
+  vistaActual: 'fechas' | 'clasico' = 'fechas';
+
+  // Datos para vista por fechas
+  semanasDisponibles: HorarioSemanalResponse[] = [];
+  semanaSeleccionada: HorarioSemanalResponse | null = null;
+  empleadosFiltrados: EmpleadoHorarioSemanal[] = [];
+
+  // Datos para vista clasica
   horariosSemanales: HorarioSemanal[] = [];
   horariosFiltrados: HorarioSemanal[] = [];
 
@@ -32,27 +49,29 @@ export class HorariosComponent implements OnInit {
 
   // Modal de edicion
   mostrarModal = false;
-  empleadoEditando: HorarioSemanal | null = null;
-  diaEditando: string = '';
-  horarioActual: HorarioDia | null = null;
+  empleadoEditando: EmpleadoHorarioSemanal | null = null;
+  diaEditando: DetalleHorarioDia | null = null;
+
+  // Modal crear semana
+  mostrarModalCrear = false;
 
   // Aplicar a multiples dias
   aplicarAOtrosDias = false;
   diasSeleccionados: { [key: string]: boolean } = {};
+  otrosDiasDisponibles: { fecha: string; dia: DetalleHorarioDia; label: string }[] = [];
 
   diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 
   diasLabels: { [key: string]: string } = {
-    'lunes': 'Lunes',
-    'martes': 'Martes',
-    'miercoles': 'Miércoles',
-    'jueves': 'Jueves',
-    'viernes': 'Viernes',
-    'sabado': 'Sábado',
-    'domingo': 'Domingo'
+    'lunes': 'Lun',
+    'martes': 'Mar',
+    'miercoles': 'Mié',
+    'jueves': 'Jue',
+    'viernes': 'Vie',
+    'sabado': 'Sáb',
+    'domingo': 'Dom'
   };
 
-  // Admin no tiene horarios, solo supervisor, tecnico, hd, noc
   roles = [
     { value: '', label: 'Todos los roles' },
     { value: 'supervisor', label: 'Supervisor' },
@@ -62,14 +81,22 @@ export class HorariosComponent implements OnInit {
   ];
 
   tiposDia = [
-    { value: 'normal', label: 'Normal', color: 'success' },
-    { value: 'descanso', label: 'Descanso', color: 'secondary' },
-    { value: 'compensado', label: 'Dia Compensado', color: 'info' },
-    { value: 'vacaciones', label: 'Vacaciones', color: 'warning' }
+    { value: 'normal', label: 'Normal', color: 'success', icon: 'bi-briefcase' },
+    { value: 'descanso', label: 'Descanso', color: 'secondary', icon: 'bi-moon-stars' },
+    { value: 'compensado', label: 'Compensado', color: 'info', icon: 'bi-calendar-check' },
+    { value: 'vacaciones', label: 'Vacaciones', color: 'warning', icon: 'bi-sun' },
+    { value: 'permiso', label: 'Permiso', color: 'primary', icon: 'bi-person-check' }
+  ];
+
+  estadosSemana = [
+    { value: 'borrador', label: 'Borrador', class: 'bg-secondary' },
+    { value: 'activo', label: 'Activo', class: 'bg-success' },
+    { value: 'historico', label: 'Histórico', class: 'bg-dark' }
   ];
 
   constructor() {
-    this.horarioForm = this.initForm();
+    this.horarioForm = this.initHorarioForm();
+    this.semanaForm = this.initSemanaForm();
   }
 
   ngOnInit() {
@@ -77,10 +104,10 @@ export class HorariosComponent implements OnInit {
     if (rol === 'tecnico' || rol === 'hd' || rol === 'noc') {
       this.filtroRol = rol;
     }
-    this.cargarDatos();
+    this.cargarSemanas();
   }
 
-  initForm(): FormGroup {
+  initHorarioForm(): FormGroup {
     return this.fb.group({
       tipoDia: ['normal', Validators.required],
       turno: ['manana'],
@@ -91,48 +118,159 @@ export class HorariosComponent implements OnInit {
     });
   }
 
-  cargarDatos() {
-    this.isLoading = true;
-    const rol = this.filtroRol || undefined;
+  initSemanaForm(): FormGroup {
+    const hoy = new Date();
+    const lunes = this.getLunesDeSemana(hoy);
+    const domingo = new Date(lunes);
+    domingo.setDate(domingo.getDate() + 6);
 
-    this.horariosService.getVistaConsolidada(rol).subscribe({
-      next: (data) => {
-        this.horariosSemanales = data;
+    return this.fb.group({
+      fechaInicio: [this.formatDate(lunes), Validators.required],
+      fechaFin: [this.formatDate(domingo), Validators.required],
+      copiarDeId: ['']
+    });
+  }
+
+  getLunesDeSemana(fecha: Date): Date {
+    const d = new Date(fecha);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  }
+
+  formatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
+  }
+
+  // ========== CARGAR DATOS ==========
+
+  cargarSemanas() {
+    this.isLoading = true;
+    this.horariosService.getSemanasHorarios().subscribe({
+      next: (semanas) => {
+        this.semanasDisponibles = semanas;
+        // Si hay semana vigente, seleccionarla
+        const vigente = semanas.find(s => s.esSemanaActual);
+        if (vigente) {
+          this.seleccionarSemana(vigente.id);
+        } else if (semanas.length > 0) {
+          this.seleccionarSemana(semanas[0].id);
+        } else {
+          this.isLoading = false;
+        }
+      },
+      error: () => {
+        this.notification.error('Error al cargar semanas', 'Error');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  seleccionarSemana(semanaId: number) {
+    this.isLoading = true;
+    this.horariosService.getSemanaById(semanaId).subscribe({
+      next: (semana) => {
+        this.semanaSeleccionada = semana;
         this.aplicarFiltros();
         this.isLoading = false;
       },
       error: () => {
-        this.notification.error('Error al cargar horarios', 'Error');
+        this.notification.error('Error al cargar semana', 'Error');
         this.isLoading = false;
       }
     });
   }
 
-  aplicarFiltros() {
-    this.horariosFiltrados = this.horariosSemanales.filter(h => {
-      if (this.filtroBusqueda) {
-        return h.empleadoNombre.toLowerCase().includes(this.filtroBusqueda.toLowerCase());
+  cargarSemanaVigente() {
+    this.isLoading = true;
+    this.horariosService.getSemanaVigente().subscribe({
+      next: (semana) => {
+        this.semanaSeleccionada = semana;
+        this.aplicarFiltros();
+        this.isLoading = false;
+      },
+      error: (err) => {
+        this.notification.warning('No hay semana vigente configurada', 'Aviso');
+        this.isLoading = false;
       }
-      return true;
     });
   }
 
+  // ========== FILTROS ==========
+
+  aplicarFiltros() {
+    if (!this.semanaSeleccionada) {
+      this.empleadosFiltrados = [];
+      return;
+    }
+
+    let empleados = [...this.semanaSeleccionada.empleados];
+
+    // Filtrar por rol
+    if (this.filtroRol) {
+      empleados = empleados.filter(e =>
+        e.empleadoRol?.toLowerCase() === this.filtroRol.toLowerCase()
+      );
+    }
+
+    // Filtrar por búsqueda
+    if (this.filtroBusqueda) {
+      empleados = empleados.filter(e =>
+        e.empleadoNombre.toLowerCase().includes(this.filtroBusqueda.toLowerCase())
+      );
+    }
+
+    this.empleadosFiltrados = empleados;
+  }
+
   onFiltroRolChange() {
-    this.cargarDatos();
+    this.aplicarFiltros();
   }
 
-  getHorarioDia(empleado: HorarioSemanal, dia: string): HorarioDia | null {
-    const horarios = empleado.horariosSemana as any;
-    return horarios[dia] || null;
+  // ========== HELPERS PARA FECHAS ==========
+
+  getFechasDeSemana(): string[] {
+    if (!this.semanaSeleccionada) return [];
+    const fechas: string[] = [];
+    const inicio = new Date(this.semanaSeleccionada.fechaInicio);
+    for (let i = 0; i < 7; i++) {
+      const fecha = new Date(inicio);
+      fecha.setDate(inicio.getDate() + i);
+      fechas.push(this.formatDate(fecha));
+    }
+    return fechas;
   }
 
-  getTipoDiaClass(horario: HorarioDia | null): string {
-    if (!horario) return 'sin-horario';
-    const tipo = horario.tipoDia || 'normal';
+  getDiaDeEmpleado(empleado: EmpleadoHorarioSemanal, fecha: string): DetalleHorarioDia | null {
+    return empleado.dias[fecha] || null;
+  }
+
+  formatFechaCorta(fechaStr: string): string {
+    const fecha = new Date(fechaStr + 'T00:00:00');
+    return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+  }
+
+  getDiaSemanaFromFecha(fechaStr: string): string {
+    const fecha = new Date(fechaStr + 'T00:00:00');
+    const dias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    return dias[fecha.getDay()];
+  }
+
+  esHoy(fechaStr: string): boolean {
+    const hoy = new Date().toISOString().split('T')[0];
+    return fechaStr === hoy;
+  }
+
+  // ========== ESTILOS ==========
+
+  getTipoDiaClass(dia: DetalleHorarioDia | null): string {
+    if (!dia) return 'sin-horario';
+    const tipo = dia.tipoDia || 'normal';
     switch (tipo) {
       case 'descanso': return 'bg-secondary text-white';
       case 'compensado': return 'bg-info text-white';
       case 'vacaciones': return 'bg-warning text-dark';
+      case 'permiso': return 'bg-primary text-white';
       default: return 'bg-light';
     }
   }
@@ -143,12 +281,18 @@ export class HorariosComponent implements OnInit {
     return tipoObj ? tipoObj.label : tipo;
   }
 
+  getTipoDiaIcon(tipo: string | undefined): string {
+    if (!tipo) return 'bi-briefcase';
+    const tipoObj = this.tiposDia.find(t => t.value === tipo);
+    return tipoObj ? tipoObj.icon : 'bi-briefcase';
+  }
+
   getRolLabel(rol: string): string {
     const rolUpper = rol?.toUpperCase() || '';
     switch (rolUpper) {
       case 'ADMIN': return 'Admin';
       case 'SUPERVISOR': return 'Supervisor';
-      case 'TECNICO': return 'Tecnico';
+      case 'TECNICO': return 'Técnico';
       case 'HD': return 'HD';
       case 'NOC': return 'NOC';
       default: return rol;
@@ -166,111 +310,178 @@ export class HorariosComponent implements OnInit {
     }
   }
 
-  // ========== EXPORTAR ==========
-
-  exportarExcel() {
-    if (this.horariosFiltrados.length === 0) {
-      this.notification.warning('No hay datos para exportar', 'Aviso');
-      return;
-    }
-
-    const data = this.prepararDatosExport();
-    const nombre = this.filtroRol
-      ? `horario_semanal_${this.filtroRol}`
-      : 'horario_semanal';
-
-    this.exportService.exportToExcel(data, nombre, 'Horarios');
-    this.notification.success('Archivo Excel generado', 'Exportar');
+  getEstadoClass(estado: string): string {
+    const est = this.estadosSemana.find(e => e.value === estado);
+    return est ? `badge ${est.class}` : 'badge bg-secondary';
   }
 
-  exportarPdf() {
-    if (this.horariosFiltrados.length === 0) {
-      this.notification.warning('No hay datos para exportar', 'Aviso');
-      return;
-    }
+  // ========== CREAR SEMANA ==========
 
-    const data = this.prepararDatosExport();
-    const columns = [
-      { header: 'Empleado', dataKey: 'empleado' },
-      { header: 'Cargo', dataKey: 'cargo' },
-      { header: 'Lunes', dataKey: 'lunes' },
-      { header: 'Martes', dataKey: 'martes' },
-      { header: 'Miércoles', dataKey: 'miercoles' },
-      { header: 'Jueves', dataKey: 'jueves' },
-      { header: 'Viernes', dataKey: 'viernes' },
-      { header: 'Sábado', dataKey: 'sabado' },
-      { header: 'Domingo', dataKey: 'domingo' }
-    ];
+  abrirModalCrear() {
+    const hoy = new Date();
+    const lunes = this.getLunesDeSemana(hoy);
+    // Siguiente semana
+    lunes.setDate(lunes.getDate() + 7);
+    const domingo = new Date(lunes);
+    domingo.setDate(domingo.getDate() + 6);
 
-    const titulo = this.filtroRol
-      ? `Horario Semanal - ${this.getRolLabel(this.filtroRol)}`
-      : 'Horario Semanal';
-
-    this.exportService.exportToPDF(data, columns, {
-      title: titulo,
-      orientation: 'landscape',
-      filename: this.filtroRol ? `horario_semanal_${this.filtroRol}` : 'horario_semanal',
-      fontSize: 7,
-      autoColumnWidth: true
+    this.semanaForm.patchValue({
+      fechaInicio: this.formatDate(lunes),
+      fechaFin: this.formatDate(domingo),
+      copiarDeId: this.semanaSeleccionada?.id?.toString() || ''
     });
-    this.notification.success('Archivo PDF generado', 'Exportar');
+    this.mostrarModalCrear = true;
   }
 
-  private prepararDatosExport(): any[] {
-    return this.horariosFiltrados.map(emp => {
-      const row: any = {
-        empleado: emp.empleadoNombre,
-        cargo: emp.empleadoCargo || ''
-      };
+  cerrarModalCrear() {
+    this.mostrarModalCrear = false;
+  }
 
-      this.diasSemana.forEach(dia => {
-        const horario = this.getHorarioDia(emp, dia);
-        if (!horario) {
-          row[dia] = 'Sin horario';
-        } else if (horario.tipoDia === 'descanso') {
-          row[dia] = 'DESCANSO';
-        } else if (horario.tipoDia === 'vacaciones') {
-          row[dia] = 'VACACIONES';
-        } else if (horario.tipoDia === 'compensado') {
-          row[dia] = 'COMPENSADO';
-        } else {
-          const entrada = horario.horaEntrada || '--';
-          const salida = horario.horaSalida || '--';
-          row[dia] = `${entrada} - ${salida}`;
-          if (horario.horaAlmuerzoInicio && horario.horaAlmuerzoFin) {
-            row[dia] += ` (Alm: ${horario.horaAlmuerzoInicio}-${horario.horaAlmuerzoFin})`;
-          }
+  onFechaInicioChange() {
+    const fechaInicio = this.semanaForm.get('fechaInicio')?.value;
+    if (fechaInicio) {
+      const inicio = new Date(fechaInicio);
+      const fin = new Date(inicio);
+      fin.setDate(inicio.getDate() + 6);
+      this.semanaForm.patchValue({ fechaFin: this.formatDate(fin) });
+    }
+  }
+
+  crearSemana() {
+    if (this.semanaForm.invalid) return;
+
+    const formValue = this.semanaForm.value;
+    const empleado = this.authService.getCurrentEmpleado();
+
+    if (!empleado?.id) {
+      this.notification.error('No se pudo obtener el usuario actual. Por favor, inicie sesión nuevamente.', 'Error');
+      return;
+    }
+
+    // Convertir copiarDeId a número o undefined (evitar string "null")
+    let copiarDeId: number | undefined = undefined;
+    if (formValue.copiarDeId && formValue.copiarDeId !== 'null' && formValue.copiarDeId !== '') {
+      copiarDeId = Number(formValue.copiarDeId);
+    }
+
+    const request: HorarioSemanalRequest = {
+      fechaInicio: formValue.fechaInicio,
+      fechaFin: formValue.fechaFin,
+      creadoPorId: empleado.id,
+      copiarDeId: copiarDeId
+    };
+
+    console.log('Creando semana con request:', request);
+
+    this.isLoading = true;
+    this.horariosService.generarSemana(request).subscribe({
+      next: (semana) => {
+        this.notification.success(`Semana "${semana.nombre}" creada correctamente`, 'Éxito');
+        this.cerrarModalCrear();
+        this.cargarSemanas();
+        this.seleccionarSemana(semana.id);
+      },
+      error: (err) => {
+        this.notification.error(err || 'Error al crear semana', 'Error');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  copiarSemanaActual() {
+    if (!this.semanaSeleccionada) return;
+
+    const fechaInicio = new Date(this.semanaSeleccionada.fechaInicio);
+    fechaInicio.setDate(fechaInicio.getDate() + 7);
+
+    this.isLoading = true;
+    this.horariosService.copiarSemana(
+      this.semanaSeleccionada.id,
+      this.formatDate(fechaInicio)
+    ).subscribe({
+      next: (semana) => {
+        this.notification.success(`Semana "${semana.nombre}" copiada correctamente`, 'Éxito');
+        this.cargarSemanas();
+        this.seleccionarSemana(semana.id);
+      },
+      error: (err) => {
+        this.notification.error(err || 'Error al copiar semana', 'Error');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  // ========== CAMBIAR ESTADO SEMANA ==========
+
+  cambiarEstado(nuevoEstado: string) {
+    if (!this.semanaSeleccionada) return;
+
+    this.horariosService.cambiarEstadoSemana(this.semanaSeleccionada.id, nuevoEstado).subscribe({
+      next: (semana) => {
+        this.semanaSeleccionada = semana;
+        this.notification.success(`Estado cambiado a "${nuevoEstado}"`, 'Éxito');
+        this.cargarSemanas();
+      },
+      error: (err) => {
+        this.notification.error(err || 'Error al cambiar estado', 'Error');
+      }
+    });
+  }
+
+  async eliminarSemana() {
+    if (!this.semanaSeleccionada) return;
+    if (this.semanaSeleccionada.estado !== 'borrador') {
+      this.notification.warning('Solo se pueden eliminar semanas en estado borrador', 'Aviso');
+      return;
+    }
+
+    const confirmado = await this.notification.confirm({
+      title: 'Confirmar eliminación',
+      message: '¿Está seguro de eliminar esta semana?',
+      type: 'danger',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar'
+    });
+
+    if (confirmado && this.semanaSeleccionada) {
+      this.horariosService.eliminarSemana(this.semanaSeleccionada.id).subscribe({
+        next: () => {
+          this.notification.success('Semana eliminada', 'Éxito');
+          this.semanaSeleccionada = null;
+          this.cargarSemanas();
+        },
+        error: (err) => {
+          this.notification.error(err || 'Error al eliminar', 'Error');
         }
       });
-
-      return row;
-    });
+    }
   }
 
-  // ========== MODAL EDITAR ==========
+  // ========== MODAL EDITAR DIA ==========
 
-  editarHorario(empleado: HorarioSemanal, dia: string) {
+  editarDia(empleado: EmpleadoHorarioSemanal, dia: DetalleHorarioDia) {
     if (!this.tienePermiso()) return;
+    if (dia.origenTipoDia === 'solicitud_aprobada') {
+      this.notification.warning('Este día está asignado por una solicitud aprobada. Para modificarlo, primero debe rechazar la solicitud.', 'Aviso');
+      return;
+    }
 
     this.empleadoEditando = empleado;
     this.diaEditando = dia;
-    this.horarioActual = this.getHorarioDia(empleado, dia);
 
     // Reset dias seleccionados
     this.aplicarAOtrosDias = false;
     this.diasSeleccionados = {};
-    this.diasSemana.forEach(d => {
-      this.diasSeleccionados[d] = false;
-    });
+    this.calcularOtrosDiasDisponibles();
 
-    if (this.horarioActual) {
+    if (dia) {
       this.horarioForm.patchValue({
-        tipoDia: this.horarioActual.tipoDia || 'normal',
-        turno: this.horarioActual.turno || 'manana',
-        horaEntrada: this.horarioActual.horaEntrada || '08:00',
-        horaSalida: this.horarioActual.horaSalida || '17:00',
-        horaAlmuerzoInicio: this.horarioActual.horaAlmuerzoInicio || '12:00',
-        horaAlmuerzoFin: this.horarioActual.horaAlmuerzoFin || '13:00'
+        tipoDia: dia.tipoDia || 'normal',
+        turno: dia.turno || 'manana',
+        horaEntrada: dia.horaEntrada || '08:00',
+        horaSalida: dia.horaSalida || '17:00',
+        horaAlmuerzoInicio: dia.horaAlmuerzoInicio || '12:00',
+        horaAlmuerzoFin: dia.horaAlmuerzoFin || '13:00'
       });
     } else {
       this.horarioForm.reset({
@@ -289,87 +500,80 @@ export class HorariosComponent implements OnInit {
   cerrarModal() {
     this.mostrarModal = false;
     this.empleadoEditando = null;
-    this.diaEditando = '';
-    this.horarioActual = null;
+    this.diaEditando = null;
     this.aplicarAOtrosDias = false;
     this.diasSeleccionados = {};
   }
 
-  getDiasParaAplicar(): string[] {
-    if (!this.aplicarAOtrosDias) return [];
-    return this.diasSemana.filter(d => d !== this.diaEditando && this.diasSeleccionados[d]);
-  }
-
   guardarHorario() {
-    if (!this.empleadoEditando || !this.diaEditando) return;
+    if (!this.empleadoEditando || !this.diaEditando?.id) return;
 
     const formValue = this.horarioForm.value;
     this.isLoading = true;
 
-    const payload: any = {
+    const payload: Partial<DetalleHorarioDia> = {
       tipoDia: formValue.tipoDia,
       turno: formValue.turno || 'manana'
     };
 
-    // Solo enviar horas si el tipo es normal
     if (formValue.tipoDia === 'normal') {
       payload.horaEntrada = formValue.horaEntrada;
       payload.horaSalida = formValue.horaSalida;
-      // Turno tarde no tiene refrigerio
       if (formValue.turno === 'tarde') {
-        payload.horaAlmuerzoInicio = null;
-        payload.horaAlmuerzoFin = null;
+        payload.horaAlmuerzoInicio = '';
+        payload.horaAlmuerzoFin = '';
       } else {
         payload.horaAlmuerzoInicio = formValue.horaAlmuerzoInicio;
         payload.horaAlmuerzoFin = formValue.horaAlmuerzoFin;
       }
     } else {
-      payload.horaEntrada = null;
-      payload.horaSalida = null;
-      payload.horaAlmuerzoInicio = null;
-      payload.horaAlmuerzoFin = null;
+      payload.horaEntrada = '';
+      payload.horaSalida = '';
+      payload.horaAlmuerzoInicio = '';
+      payload.horaAlmuerzoFin = '';
     }
 
-    // Si hay dias adicionales seleccionados, usar endpoint de multiples dias
-    const diasExtras = this.getDiasParaAplicar();
-    if (diasExtras.length > 0) {
-      const todosLosDias = [this.diaEditando, ...diasExtras];
-      const multiPayload = {
-        ...payload,
-        dias: todosLosDias
-      };
+    // Recolectar IDs de días seleccionados
+    const detalleIds: number[] = [this.diaEditando.id];
 
-      this.horariosService.aplicarHorarioMultiplesDias(
-        this.empleadoEditando.empleadoId,
-        multiPayload
-      ).subscribe({
-        next: () => {
-          this.notification.success(
-            `Horario aplicado a ${todosLosDias.length} dia(s) correctamente`,
-            'Exito'
-          );
+    if (this.aplicarAOtrosDias && this.empleadoEditando) {
+      // Agregar los días seleccionados (excepto el día actual que ya está incluido)
+      for (const [fecha, seleccionado] of Object.entries(this.diasSeleccionados)) {
+        if (seleccionado) {
+          const dia = this.empleadoEditando.dias[fecha];
+          if (dia?.id && dia.id !== this.diaEditando.id && dia.origenTipoDia !== 'solicitud_aprobada') {
+            detalleIds.push(dia.id);
+          }
+        }
+      }
+    }
+
+    // Usar endpoint múltiple si hay más de un día seleccionado
+    if (detalleIds.length > 1) {
+      this.horariosService.actualizarMultiplesDias(detalleIds, payload).subscribe({
+        next: (semana) => {
+          this.notification.success(`Horario aplicado a ${detalleIds.length} días`, 'Éxito');
+          this.semanaSeleccionada = semana;
+          this.aplicarFiltros();
           this.cerrarModal();
-          this.cargarDatos();
+          this.isLoading = false;
         },
-        error: (error) => {
-          this.notification.error(error || 'Error al aplicar horario', 'Error');
+        error: (err) => {
+          this.notification.error(err || 'Error al guardar horarios', 'Error');
           this.isLoading = false;
         }
       });
     } else {
-      // Guardar solo el dia actual
-      this.horariosService.guardarHorarioDia(
-        this.empleadoEditando.empleadoId,
-        this.diaEditando,
-        payload
-      ).subscribe({
-        next: () => {
-          this.notification.success('Horario guardado correctamente', 'Exito');
+      this.horariosService.actualizarDetalleDia(this.diaEditando.id, payload).subscribe({
+        next: (semana) => {
+          this.notification.success('Horario actualizado correctamente', 'Éxito');
+          this.semanaSeleccionada = semana;
+          this.aplicarFiltros();
           this.cerrarModal();
-          this.cargarDatos();
+          this.isLoading = false;
         },
-        error: (error) => {
-          this.notification.error(error || 'Error al guardar horario', 'Error');
+        error: (err) => {
+          this.notification.error(err || 'Error al guardar horario', 'Error');
           this.isLoading = false;
         }
       });
@@ -430,8 +634,113 @@ export class HorariosComponent implements OnInit {
     }
   }
 
+  // Calcular los otros días del empleado (para aplicar a múltiples)
+  calcularOtrosDiasDisponibles(): void {
+    this.otrosDiasDisponibles = [];
+
+    if (!this.empleadoEditando || !this.diaEditando) return;
+
+    for (const [fecha, dia] of Object.entries(this.empleadoEditando.dias)) {
+      // Excluir el día que se está editando y los días con solicitud aprobada
+      if (dia && dia.id !== this.diaEditando.id && dia.origenTipoDia !== 'solicitud_aprobada') {
+        const label = `${this.diasLabels[dia.diaSemana] || dia.diaSemana} ${this.formatFechaCorta(fecha)}`;
+        this.otrosDiasDisponibles.push({ fecha, dia, label });
+      }
+    }
+  }
+
+  // Seleccionar/deseleccionar todos los días
+  toggleSeleccionarTodos() {
+    const todosSeleccionados = this.otrosDiasDisponibles.every(d => this.diasSeleccionados[d.fecha]);
+
+    for (const d of this.otrosDiasDisponibles) {
+      this.diasSeleccionados[d.fecha] = !todosSeleccionados;
+    }
+  }
+
+  // Contar días seleccionados
+  getSelectedDaysCount(): number {
+    return Object.values(this.diasSeleccionados).filter(v => v).length;
+  }
+
   esTurnoTarde(): boolean {
     return this.horarioForm.get('turno')?.value === 'tarde';
+  }
+
+  // ========== EXPORTAR ==========
+
+  exportarExcel() {
+    if (this.empleadosFiltrados.length === 0) {
+      this.notification.warning('No hay datos para exportar', 'Aviso');
+      return;
+    }
+
+    const data = this.prepararDatosExport();
+    const nombre = this.semanaSeleccionada
+      ? `horario_${this.semanaSeleccionada.fechaInicio}_${this.semanaSeleccionada.fechaFin}`
+      : 'horario_semanal';
+
+    this.exportService.exportToExcel(data, nombre, 'Horarios');
+    this.notification.success('Archivo Excel generado', 'Exportar');
+  }
+
+  exportarPdf() {
+    if (this.empleadosFiltrados.length === 0) {
+      this.notification.warning('No hay datos para exportar', 'Aviso');
+      return;
+    }
+
+    const data = this.prepararDatosExport();
+    const fechas = this.getFechasDeSemana();
+    const columns = [
+      { header: 'Empleado', dataKey: 'empleado' },
+      { header: 'Cargo', dataKey: 'cargo' },
+      ...fechas.map(f => ({
+        header: `${this.diasLabels[this.getDiaSemanaFromFecha(f)]} ${this.formatFechaCorta(f)}`,
+        dataKey: f
+      }))
+    ];
+
+    const titulo = this.semanaSeleccionada
+      ? `Horario - ${this.semanaSeleccionada.nombre}`
+      : 'Horario Semanal';
+
+    this.exportService.exportToPDF(data, columns, {
+      title: titulo,
+      orientation: 'landscape',
+      filename: this.semanaSeleccionada
+        ? `horario_${this.semanaSeleccionada.fechaInicio}`
+        : 'horario_semanal',
+      fontSize: 7,
+      autoColumnWidth: true
+    });
+    this.notification.success('Archivo PDF generado', 'Exportar');
+  }
+
+  private prepararDatosExport(): any[] {
+    const fechas = this.getFechasDeSemana();
+
+    return this.empleadosFiltrados.map(emp => {
+      const row: any = {
+        empleado: emp.empleadoNombre,
+        cargo: emp.empleadoCargo || ''
+      };
+
+      fechas.forEach(fecha => {
+        const dia = this.getDiaDeEmpleado(emp, fecha);
+        if (!dia) {
+          row[fecha] = 'Sin horario';
+        } else if (dia.tipoDia && dia.tipoDia !== 'normal') {
+          row[fecha] = dia.tipoDia.toUpperCase();
+        } else {
+          const entrada = dia.horaEntrada || '--';
+          const salida = dia.horaSalida || '--';
+          row[fecha] = `${entrada} - ${salida}`;
+        }
+      });
+
+      return row;
+    });
   }
 
   tienePermiso(): boolean {

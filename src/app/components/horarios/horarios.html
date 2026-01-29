@@ -6,37 +6,122 @@
         <i class="bi bi-calendar-week me-2"></i>
         Horarios Semanales
       </h2>
-      <p class="text-muted mb-0">Vista consolidada de horarios de todos los empleados</p>
+      <p class="text-muted mb-0">Gestiona los horarios por semanas con fechas específicas</p>
     </div>
-    <!-- Botones de exportar -->
+    <!-- Botones de accion -->
     <div class="d-flex gap-2">
-      <button class="btn btn-success btn-sm" (click)="exportarExcel()" [disabled]="horariosFiltrados.length === 0">
+      <button *ngIf="tienePermiso()" class="btn btn-primary btn-sm" (click)="abrirModalCrear()">
+        <i class="bi bi-plus-lg me-1"></i> Nueva Semana
+      </button>
+      <button class="btn btn-success btn-sm" (click)="exportarExcel()" [disabled]="empleadosFiltrados.length === 0">
         <i class="bi bi-file-earmark-excel me-1"></i> Excel
       </button>
-      <button class="btn btn-danger btn-sm" (click)="exportarPdf()" [disabled]="horariosFiltrados.length === 0">
+      <button class="btn btn-danger btn-sm" (click)="exportarPdf()" [disabled]="empleadosFiltrados.length === 0">
         <i class="bi bi-file-earmark-pdf me-1"></i> PDF
       </button>
     </div>
   </div>
 
-  <!-- Filtros -->
-  <div class="card mb-4">
+  <!-- Selector de Semana -->
+  <div class="card mb-4 border-primary">
+    <div class="card-header bg-primary text-white py-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calendar3 me-2"></i>Seleccionar Semana</span>
+        <span *ngIf="semanaSeleccionada" [class]="getEstadoClass(semanaSeleccionada.estado)">
+          {{ semanaSeleccionada.estado | titlecase }}
+        </span>
+      </div>
+    </div>
     <div class="card-body">
       <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-          <label class="form-label">Filtrar por rol</label>
-          <select class="form-select" [(ngModel)]="filtroRol" (change)="onFiltroRolChange()">
+        <div class="col-md-5">
+          <label class="form-label">Semana</label>
+          <select class="form-select"
+                  [ngModel]="semanaSeleccionada?.id"
+                  (ngModelChange)="seleccionarSemana($event)">
+            <option *ngFor="let semana of semanasDisponibles" [value]="semana.id">
+              {{ semana.nombre }}
+              <span *ngIf="semana.esSemanaActual"> (Actual)</span>
+            </option>
+          </select>
+        </div>
+        <div class="col-md-4" *ngIf="semanaSeleccionada">
+          <div class="d-flex gap-2">
+            <div class="text-center flex-fill">
+              <small class="text-muted d-block">Desde</small>
+              <strong>{{ formatFechaCorta(semanaSeleccionada.fechaInicio) }}</strong>
+            </div>
+            <div class="text-center">
+              <i class="bi bi-arrow-right text-muted"></i>
+            </div>
+            <div class="text-center flex-fill">
+              <small class="text-muted d-block">Hasta</small>
+              <strong>{{ formatFechaCorta(semanaSeleccionada.fechaFin) }}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3" *ngIf="tienePermiso() && semanaSeleccionada">
+          <div class="btn-group w-100" role="group">
+            <button class="btn btn-outline-secondary btn-sm"
+                    (click)="copiarSemanaActual()"
+                    title="Copiar a siguiente semana">
+              <i class="bi bi-copy"></i>
+            </button>
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle"
+                      data-bs-toggle="dropdown">
+                Estado
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" (click)="cambiarEstado('borrador')">
+                  <i class="bi bi-pencil me-2"></i>Borrador</a></li>
+                <li><a class="dropdown-item" (click)="cambiarEstado('activo')">
+                  <i class="bi bi-check-circle me-2"></i>Activo</a></li>
+                <li><a class="dropdown-item" (click)="cambiarEstado('historico')">
+                  <i class="bi bi-archive me-2"></i>Histórico</a></li>
+              </ul>
+            </div>
+            <button class="btn btn-outline-danger btn-sm"
+                    (click)="eliminarSemana()"
+                    [disabled]="semanaSeleccionada.estado !== 'borrador'"
+                    title="Eliminar semana">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sin semanas -->
+  <div *ngIf="!isLoading && semanasDisponibles.length === 0" class="text-center py-5">
+    <i class="bi bi-calendar-x display-1 text-muted"></i>
+    <h4 class="mt-3 text-muted">No hay semanas configuradas</h4>
+    <p class="text-muted">Crea tu primera semana de horarios para comenzar</p>
+    <button *ngIf="tienePermiso()" class="btn btn-primary" (click)="abrirModalCrear()">
+      <i class="bi bi-plus-lg me-1"></i> Crear Primera Semana
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card mb-4" *ngIf="semanaSeleccionada">
+    <div class="card-body py-2">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small">Filtrar por rol</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filtroRol" (change)="onFiltroRolChange()">
             <option *ngFor="let rol of roles" [value]="rol.value">{{ rol.label }}</option>
           </select>
         </div>
         <div class="col-md-6">
-          <label class="form-label">Buscar empleado</label>
-          <input type="text" class="form-control" placeholder="Nombre del empleado..."
+          <label class="form-label small">Buscar empleado</label>
+          <input type="text" class="form-control form-control-sm" placeholder="Nombre del empleado..."
                  [(ngModel)]="filtroBusqueda" (ngModelChange)="aplicarFiltros()">
         </div>
-        <div class="col-md-2">
-          <button class="btn btn-outline-secondary w-100" (click)="filtroRol=''; filtroBusqueda=''; cargarDatos()">
-            <i class="bi bi-x-lg me-1"></i> Limpiar
+        <div class="col-md-3">
+          <button class="btn btn-outline-secondary btn-sm w-100"
+                  (click)="filtroRol=''; filtroBusqueda=''; aplicarFiltros()">
+            <i class="bi bi-x-lg me-1"></i> Limpiar filtros
           </button>
         </div>
       </div>
@@ -44,12 +129,15 @@
   </div>
 
   <!-- Leyenda -->
-  <div class="mb-3">
-    <span class="me-3"><span class="badge bg-light text-dark border">Normal</span></span>
-    <span class="me-3"><span class="badge bg-secondary">Descanso</span></span>
-    <span class="me-3"><span class="badge bg-info">Dia Compensado</span></span>
-    <span class="me-3"><span class="badge bg-warning text-dark">Vacaciones</span></span>
-    <span><span class="badge bg-light text-muted border border-dashed">Sin horario</span></span>
+  <div class="mb-3" *ngIf="semanaSeleccionada">
+    <span class="me-2"><span class="badge bg-light text-dark border">Normal</span></span>
+    <span class="me-2"><span class="badge bg-secondary">Descanso</span></span>
+    <span class="me-2"><span class="badge bg-info">Compensado</span></span>
+    <span class="me-2"><span class="badge bg-warning text-dark">Vacaciones</span></span>
+    <span class="me-2"><span class="badge bg-primary">Permiso</span></span>
+    <span class="me-2">
+      <span class="badge bg-success"><i class="bi bi-star-fill"></i> Hoy</span>
+    </span>
   </div>
 
   <!-- Loading -->
@@ -60,86 +148,101 @@
     <p class="mt-2 text-muted">Cargando horarios...</p>
   </div>
 
-  <!-- Tabla consolidada -->
-  <div *ngIf="!isLoading" class="card">
+  <!-- Tabla de horarios por fechas -->
+  <div *ngIf="!isLoading && semanaSeleccionada" class="card">
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-bordered table-hover mb-0 horarios-table">
           <thead class="table-dark">
             <tr>
-              <th class="col-empleado">Empleado</th>
-              <th *ngFor="let dia of diasSemana" class="col-dia text-center">{{ diasLabels[dia] }}</th>
+              <th class="col-empleado" style="min-width: 180px;">Empleado</th>
+              <th *ngFor="let fecha of getFechasDeSemana()"
+                  class="col-dia text-center"
+                  [class.bg-success]="esHoy(fecha)"
+                  [class.text-white]="esHoy(fecha)"
+                  style="min-width: 100px;">
+                <div>{{ diasLabels[getDiaSemanaFromFecha(fecha)] }}</div>
+                <small [class.fw-bold]="esHoy(fecha)">{{ formatFechaCorta(fecha) }}</small>
+                <i *ngIf="esHoy(fecha)" class="bi bi-star-fill ms-1"></i>
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let empleado of horariosFiltrados">
+            <tr *ngFor="let empleado of empleadosFiltrados">
               <!-- Columna Empleado -->
               <td class="col-empleado">
                 <div class="d-flex flex-column">
-                  <strong>{{ empleado.empleadoNombre }}</strong>
+                  <strong class="text-truncate" style="max-width: 150px;">{{ empleado.empleadoNombre }}</strong>
                   <div>
-                    <span [class]="getRolClass(empleado.empleadoRol)">{{ getRolLabel(empleado.empleadoRol) }}</span>
-                    <small class="text-muted ms-2">{{ empleado.empleadoCargo }}</small>
+                    <span [class]="getRolClass(empleado.empleadoRol)" style="font-size: 0.7rem;">
+                      {{ getRolLabel(empleado.empleadoRol) }}
+                    </span>
+                    <small class="text-muted ms-1 d-none d-lg-inline">{{ empleado.empleadoCargo }}</small>
                   </div>
                 </div>
               </td>
 
-              <!-- Columnas de dias -->
-              <td *ngFor="let dia of diasSemana"
-                  class="col-dia text-center celda-horario"
-                  [class]="getTipoDiaClass(getHorarioDia(empleado, dia))"
+              <!-- Columnas de dias con fechas -->
+              <td *ngFor="let fecha of getFechasDeSemana()"
+                  class="col-dia text-center celda-horario position-relative"
+                  [class]="getTipoDiaClass(getDiaDeEmpleado(empleado, fecha))"
                   [class.cursor-pointer]="tienePermiso()"
-                  (click)="editarHorario(empleado, dia)">
+                  [class.border-success]="esHoy(fecha)"
+                  [style.border-width]="esHoy(fecha) ? '3px' : '1px'"
+                  (click)="getDiaDeEmpleado(empleado, fecha) && editarDia(empleado, getDiaDeEmpleado(empleado, fecha)!)">
 
-                <ng-container *ngIf="getHorarioDia(empleado, dia) as horario">
+                <ng-container *ngIf="getDiaDeEmpleado(empleado, fecha) as dia">
+                  <!-- Indicador de solicitud aprobada -->
+                  <div *ngIf="dia.origenTipoDia === 'solicitud_aprobada'"
+                       class="position-absolute top-0 end-0 m-1"
+                       title="Asignado por solicitud aprobada">
+                    <i class="bi bi-bookmark-check-fill text-success" style="font-size: 0.7rem;"></i>
+                  </div>
+
                   <!-- Horario normal -->
-                  <div *ngIf="horario.tipoDia === 'normal' || !horario.tipoDia" class="horario-normal">
-                    <div class="turno-badge mb-1" *ngIf="horario.turno">
-                      <span class="badge" style="font-size:0.65rem"
-                            [class.bg-warning]="horario.turno === 'manana'"
-                            [class.text-dark]="horario.turno === 'manana'"
-                            [class.bg-info]="horario.turno === 'tarde'">
-                        <i class="bi" [class.bi-sunrise]="horario.turno === 'manana'" [class.bi-sunset]="horario.turno === 'tarde'"></i>
-                        {{ horario.turno === 'manana' ? 'Mañana' : 'Tarde' }}
+                  <div *ngIf="dia.tipoDia === 'normal' || !dia.tipoDia" class="horario-normal">
+                    <div class="turno-badge mb-1" *ngIf="dia.turno">
+                      <span class="badge" style="font-size:0.6rem"
+                            [class.bg-warning]="dia.turno === 'manana'"
+                            [class.text-dark]="dia.turno === 'manana'"
+                            [class.bg-info]="dia.turno === 'tarde'">
+                        <i class="bi" [class.bi-sunrise]="dia.turno === 'manana'" [class.bi-sunset]="dia.turno === 'tarde'"></i>
                       </span>
                     </div>
-                    <div class="hora-entrada">
+                    <div class="hora-entrada" style="font-size: 0.8rem;">
                       <i class="bi bi-box-arrow-in-right text-success"></i>
-                      {{ horario.horaEntrada }}
+                      {{ dia.horaEntrada }}
                     </div>
-                    <div class="hora-salida">
+                    <div class="hora-salida" style="font-size: 0.8rem;">
                       <i class="bi bi-box-arrow-right text-danger"></i>
-                      {{ horario.horaSalida }}
+                      {{ dia.horaSalida }}
                     </div>
-                    <div *ngIf="horario.horaAlmuerzoInicio" class="hora-almuerzo">
-                      <small class="text-muted">
+                    <div *ngIf="dia.horaAlmuerzoInicio" class="hora-almuerzo">
+                      <small class="text-muted" style="font-size: 0.65rem;">
                         <i class="bi bi-cup-hot"></i>
-                        {{ horario.horaAlmuerzoInicio }}-{{ horario.horaAlmuerzoFin }}
+                        {{ dia.horaAlmuerzoInicio }}-{{ dia.horaAlmuerzoFin }}
                       </small>
                     </div>
                   </div>
 
                   <!-- Otros tipos de dia -->
-                  <div *ngIf="horario.tipoDia && horario.tipoDia !== 'normal'" class="tipo-especial">
-                    <i class="bi"
-                       [class.bi-moon-stars]="horario.tipoDia === 'descanso'"
-                       [class.bi-calendar-check]="horario.tipoDia === 'compensado'"
-                       [class.bi-sun]="horario.tipoDia === 'vacaciones'"></i>
-                    <div class="small">{{ getTipoDiaLabel(horario.tipoDia) }}</div>
+                  <div *ngIf="dia.tipoDia && dia.tipoDia !== 'normal'" class="tipo-especial py-2">
+                    <i class="bi" [class]="getTipoDiaIcon(dia.tipoDia)" style="font-size: 1.2rem;"></i>
+                    <div class="small mt-1">{{ getTipoDiaLabel(dia.tipoDia) }}</div>
                   </div>
                 </ng-container>
 
                 <!-- Sin horario -->
-                <div *ngIf="!getHorarioDia(empleado, dia)" class="sin-horario-content">
+                <div *ngIf="!getDiaDeEmpleado(empleado, fecha)" class="sin-horario-content py-2">
                   <i class="bi bi-dash-circle text-muted"></i>
-                  <div class="small text-muted">Sin horario</div>
+                  <div class="small text-muted">Sin datos</div>
                 </div>
               </td>
             </tr>
 
             <!-- Sin resultados -->
-            <tr *ngIf="horariosFiltrados.length === 0">
-              <td [attr.colspan]="diasSemana.length + 1" class="text-center py-5">
+            <tr *ngIf="empleadosFiltrados.length === 0">
+              <td [attr.colspan]="getFechasDeSemana().length + 1" class="text-center py-5">
                 <i class="bi bi-inbox display-4 text-muted"></i>
                 <p class="mt-2 text-muted mb-0">No se encontraron empleados</p>
               </td>
@@ -150,12 +253,110 @@
     </div>
   </div>
 
+  <!-- Estadisticas -->
+  <div class="row mt-3" *ngIf="semanaSeleccionada && !isLoading">
+    <div class="col-md-3">
+      <div class="card bg-light">
+        <div class="card-body py-2 text-center">
+          <small class="text-muted">Empleados</small>
+          <h5 class="mb-0">{{ semanaSeleccionada.totalEmpleados || empleadosFiltrados.length }}</h5>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-light">
+        <div class="card-body py-2 text-center">
+          <small class="text-muted">Días Laborales</small>
+          <h5 class="mb-0 text-success">{{ semanaSeleccionada.totalDiasLaborales || '-' }}</h5>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-light">
+        <div class="card-body py-2 text-center">
+          <small class="text-muted">Descansos</small>
+          <h5 class="mb-0 text-secondary">{{ semanaSeleccionada.totalDescansos || '-' }}</h5>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-light">
+        <div class="card-body py-2 text-center">
+          <small class="text-muted">Vacaciones</small>
+          <h5 class="mb-0 text-warning">{{ semanaSeleccionada.totalVacaciones || '-' }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Info de edicion -->
-  <div *ngIf="tienePermiso()" class="mt-3 text-muted small">
+  <div *ngIf="tienePermiso() && semanaSeleccionada" class="mt-3 text-muted small">
     <i class="bi bi-info-circle me-1"></i>
-    Haz clic en cualquier celda para editar el horario de ese dia
+    Haz clic en cualquier celda para editar el horario de ese día.
+    Los días con <i class="bi bi-bookmark-check-fill text-success"></i> fueron asignados por una solicitud aprobada.
   </div>
 </div>
+
+<!-- Modal Crear Semana -->
+<div class="modal fade" [class.show]="mostrarModalCrear" [style.display]="mostrarModalCrear ? 'block' : 'none'"
+     tabindex="-1" (click)="cerrarModalCrear()">
+  <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-calendar-plus me-2"></i>
+          Nueva Semana de Horarios
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModalCrear()"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="semanaForm">
+          <div class="mb-3">
+            <label class="form-label">Fecha de inicio (Lunes)</label>
+            <input type="date" class="form-control" formControlName="fechaInicio"
+                   (change)="onFechaInicioChange()">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Fecha de fin (Domingo)</label>
+            <input type="date" class="form-control" formControlName="fechaFin" readonly>
+            <small class="text-muted">Se calcula automáticamente (7 días)</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Copiar horarios de semana anterior</label>
+            <select class="form-select" formControlName="copiarDeId">
+              <option value="">No copiar - Usar horario base</option>
+              <option *ngFor="let semana of semanasDisponibles" [value]="semana.id">
+                {{ semana.nombre }}
+              </option>
+            </select>
+            <small class="text-muted">Si seleccionas una semana, se copiarán los horarios de esa semana</small>
+          </div>
+        </form>
+
+        <div class="alert alert-info py-2">
+          <i class="bi bi-info-circle me-1"></i>
+          Al crear la semana:
+          <ul class="mb-0 small">
+            <li>Se generarán los 7 días para todos los empleados</li>
+            <li>Se aplicarán automáticamente las solicitudes aprobadas (vacaciones, permisos, etc.)</li>
+            <li>La semana se creará en estado "borrador"</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalCrear()">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="crearSemana()"
+                [disabled]="isLoading || semanaForm.invalid">
+          <i class="bi bi-plus-lg me-1"></i>
+          Crear Semana
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="mostrarModalCrear"></div>
 
 <!-- Modal Editar Horario -->
 <div class="modal fade" [class.show]="mostrarModal" [style.display]="mostrarModal ? 'block' : 'none'"
@@ -165,22 +366,27 @@
       <div class="modal-header bg-primary text-white">
         <h5 class="modal-title">
           <i class="bi bi-clock me-2"></i>
-          Editar Horario - {{ diasLabels[diaEditando] }}
+          Editar Horario - {{ diaEditando ? formatFechaCorta(diaEditando.fecha) : '' }}
         </h5>
         <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()"></button>
       </div>
-      <div class="modal-body" *ngIf="empleadoEditando">
+      <div class="modal-body" *ngIf="empleadoEditando && diaEditando">
         <div class="alert alert-light mb-3">
           <strong>{{ empleadoEditando.empleadoNombre }}</strong>
           <span [class]="getRolClass(empleadoEditando.empleadoRol)" class="ms-2">
             {{ getRolLabel(empleadoEditando.empleadoRol) }}
           </span>
+          <div class="mt-1">
+            <small class="text-muted">
+              {{ diasLabels[diaEditando.diaSemana] || diaEditando.diaSemana }} {{ formatFechaCorta(diaEditando.fecha) }}
+            </small>
+          </div>
         </div>
 
         <form [formGroup]="horarioForm">
           <!-- Tipo de dia -->
           <div class="mb-3">
-            <label class="form-label">Tipo de dia</label>
+            <label class="form-label">Tipo de día</label>
             <select class="form-select" formControlName="tipoDia" (change)="onTipoDiaChange()">
               <option *ngFor="let tipo of tiposDia" [value]="tipo.value">{{ tipo.label }}</option>
             </select>
@@ -194,14 +400,14 @@
               <label class="form-label">Turno</label>
               <div class="btn-group w-100" role="group">
                 <input type="radio" class="btn-check" formControlName="turno"
-                       value="manana" id="turnoManana" (change)="onTurnoChange()">
-                <label class="btn btn-outline-warning" for="turnoManana">
+                       value="manana" id="turnoMananaEdit" (change)="onTurnoChange()">
+                <label class="btn btn-outline-warning" for="turnoMananaEdit">
                   <i class="bi bi-sunrise me-1"></i> Mañana
                 </label>
 
                 <input type="radio" class="btn-check" formControlName="turno"
-                       value="tarde" id="turnoTarde" (change)="onTurnoChange()">
-                <label class="btn btn-outline-info" for="turnoTarde">
+                       value="tarde" id="turnoTardeEdit" (change)="onTurnoChange()">
+                <label class="btn btn-outline-info" for="turnoTardeEdit">
                   <i class="bi bi-sunset me-1"></i> Tarde
                 </label>
               </div>
@@ -222,7 +428,7 @@
             <div *ngIf="!esTurnoTarde()">
               <hr class="my-3">
               <h6 class="text-muted mb-3">
-                <i class="bi bi-cup-hot me-1"></i> Horario de Almuerzo (1 hora)
+                <i class="bi bi-cup-hot me-1"></i> Horario de Almuerzo
               </h6>
 
               <div class="row g-3">
@@ -247,41 +453,45 @@
           <!-- Mensaje para tipos especiales -->
           <div *ngIf="horarioForm.get('tipoDia')?.value !== 'normal'" class="alert alert-info mt-3">
             <i class="bi bi-info-circle me-2"></i>
-            Este dia sera marcado como <strong>{{ getTipoDiaLabel(horarioForm.get('tipoDia')?.value) }}</strong>
-            y no tendra horario laboral.
+            Este día será marcado como <strong>{{ getTipoDiaLabel(horarioForm.get('tipoDia')?.value) }}</strong>
+            y no tendrá horario laboral.
           </div>
-        </form>
 
-        <!-- Aplicar a otros dias -->
-        <hr class="my-3">
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="aplicarOtrosDias"
-                 [(ngModel)]="aplicarAOtrosDias">
-          <label class="form-check-label fw-bold" for="aplicarOtrosDias">
-            <i class="bi bi-calendar-range me-1"></i>
-            Aplicar este mismo horario a otros dias
-          </label>
-        </div>
+          <!-- Aplicar a múltiples días -->
+          <hr class="my-3" *ngIf="otrosDiasDisponibles.length > 0">
+          <div *ngIf="otrosDiasDisponibles.length > 0">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="aplicarMultiple"
+                     [(ngModel)]="aplicarAOtrosDias" [ngModelOptions]="{standalone: true}">
+              <label class="form-check-label fw-medium" for="aplicarMultiple">
+                <i class="bi bi-calendar2-week me-1"></i>
+                Aplicar a otros días
+              </label>
+            </div>
 
-        <div *ngIf="aplicarAOtrosDias" class="ms-4 mt-2">
-          <div class="row g-2">
-            <div class="col-auto" *ngFor="let dia of diasSemana">
-              <div class="form-check" *ngIf="dia !== diaEditando">
-                <input class="form-check-input" type="checkbox"
-                       [id]="'dia-' + dia"
-                       [(ngModel)]="diasSeleccionados[dia]">
-                <label class="form-check-label" [for]="'dia-' + dia">
-                  {{ diasLabels[dia] }}
-                </label>
+            <div *ngIf="aplicarAOtrosDias" class="ms-4 mt-2">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted">Selecciona los días a los que aplicar el mismo horario:</small>
+                <button type="button" class="btn btn-link btn-sm p-0" (click)="toggleSeleccionarTodos()">
+                  Seleccionar todos
+                </button>
+              </div>
+              <div class="row">
+                <div class="col-6 col-md-4" *ngFor="let item of otrosDiasDisponibles">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                           [id]="'dia_' + item.fecha"
+                           [(ngModel)]="diasSeleccionados[item.fecha]"
+                           [ngModelOptions]="{standalone: true}">
+                    <label class="form-check-label small" [for]="'dia_' + item.fecha">
+                      {{ item.label }}
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div *ngIf="getDiasParaAplicar().length > 0" class="alert alert-warning mt-2 py-2 small">
-            <i class="bi bi-exclamation-triangle me-1"></i>
-            Se aplicara a: <strong>{{ diasLabels[diaEditando] }}</strong>
-            <span *ngFor="let d of getDiasParaAplicar()">, <strong>{{ diasLabels[d] }}</strong></span>
-          </div>
-        </div>
+        </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
@@ -289,7 +499,7 @@
         </button>
         <button type="button" class="btn btn-primary" (click)="guardarHorario()" [disabled]="isLoading">
           <i class="bi bi-check-lg me-1"></i>
-          {{ getDiasParaAplicar().length > 0 ? 'Aplicar a ' + (getDiasParaAplicar().length + 1) + ' dias' : 'Guardar' }}
+          {{ aplicarAOtrosDias && getSelectedDaysCount() > 0 ? 'Aplicar a ' + (getSelectedDaysCount() + 1) + ' días' : 'Guardar' }}
         </button>
       </div>
     </div>

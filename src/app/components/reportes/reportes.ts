@@ -203,7 +203,9 @@ export class ReportesComponent implements OnInit {
     this.filtroBusqueda = '';
     this.filtroRol = '';
     this.filtroEstado = '';
-    this.aplicarFiltros();
+    this.fechaInicio = this.fechaHoy;
+    this.fechaFin = this.fechaHoy;
+    this.cargarReporte();
   }
 
   // ========== EXPORTAR ==========
