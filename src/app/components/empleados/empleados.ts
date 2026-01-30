@@ -270,12 +270,16 @@ export class EmpleadosComponent implements OnInit {
           this.procesarExito(this.isEditing ?
             'Empleado e imagen actualizados correctamente' :
             'Empleado creado exitosamente');
+        } else if (response.error) {
+          // Error en la respuesta pero con status 200
+          this.procesarError({ error: { error: response.error } }, 'Error al subir imagen');
         }
       },
-      error: () => {
-        this.procesarExito(this.isEditing ?
-          'Empleado actualizado (error en imagen)' :
-          'Empleado creado (error en imagen)');
+      error: (e) => {
+        // Error HTTP (400, 500, etc.)
+        const errorMsg = e.error?.error || e.error?.message || 'Error al subir la imagen';
+        this.isLoading = false;
+        this.mostrarError(errorMsg);
       }
     });
   }
@@ -774,9 +778,19 @@ export class EmpleadosComponent implements OnInit {
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/bmp'];
+
+      // Verificar tipo MIME
       if (!validTypes.includes(file.type)) {
-        this.mostrarError('Solo se permiten imagenes (JPEG, PNG, GIF)');
+        this.mostrarError('Solo se permiten imagenes JPG, PNG, GIF o BMP. WebP no es soportado.');
+        event.target.value = '';
+        return;
+      }
+
+      // Verificar extensión del archivo
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.webp')) {
+        this.mostrarError('Formato WebP no soportado. Use JPG, PNG, GIF o BMP.');
         event.target.value = '';
         return;
       }

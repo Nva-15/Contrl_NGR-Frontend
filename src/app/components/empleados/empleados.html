@@ -490,21 +490,22 @@
                 <div class="col-md-8">
                   <label class="form-label fw-bold">Seleccionar Imagen</label>
                   <div class="input-group mb-3">
-                    <input type="file" 
-                           class="form-control" 
-                           accept=".jpg,.jpeg,.png,.gif"
+                    <input type="file"
+                           class="form-control"
+                           accept="image/jpeg,image/png,image/gif,image/bmp,.jpg,.jpeg,.png,.gif,.bmp"
                            (change)="onFileSelected($event)"
                            #fileInput>
-                    <button class="btn btn-outline-secondary" 
-                            type="button" 
+                    <button class="btn btn-outline-secondary"
+                            type="button"
                             (click)="cancelarSeleccionImagen()">
                       <i class="bi bi-x-circle me-1"></i>Limpiar
                     </button>
                   </div>
                   <div class="alert alert-info small mb-0">
                     <i class="bi bi-info-circle me-2"></i>
-                    Formatos permitidos: JPG, PNG, GIF (máx. 5MB). 
-                    La imagen se subirá al backend y se renombrará automáticamente.
+                    Formatos permitidos: JPG, PNG, GIF, BMP (máx. 5MB).
+                    <strong>WebP no es soportado.</strong>
+                    La imagen se subirá al backend y se optimizará automáticamente.
                   </div>
                   <input type="hidden" formControlName="foto">
                 </div>

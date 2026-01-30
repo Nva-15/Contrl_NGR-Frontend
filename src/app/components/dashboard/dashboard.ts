@@ -263,9 +263,19 @@ export class DashboardComponent implements OnInit {
   onFileSelectedModal(event: any) {
     const file = event.target.files[0];
     if (file) {
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/bmp'];
+
+      // Verificar tipo MIME
       if (!validTypes.includes(file.type)) {
-        this.mostrarErrorModal('Solo se permiten imagenes (JPEG, PNG, GIF)');
+        this.mostrarErrorModal('Solo se permiten imagenes JPG, PNG, GIF o BMP. WebP no es soportado.');
+        event.target.value = '';
+        return;
+      }
+
+      // Verificar extensión del archivo
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.webp')) {
+        this.mostrarErrorModal('Formato WebP no soportado. Use JPG, PNG, GIF o BMP.');
         event.target.value = '';
         return;
       }
@@ -341,11 +351,15 @@ export class DashboardComponent implements OnInit {
           this.fotoUrl = this.getFotoUrl(response.ruta, this.currentEmpleado.nombre);
           this.mostrarMensajeModal('Foto actualizada correctamente');
           this.cancelarFotoModal();
+        } else if (response.error) {
+          // Manejar respuesta de error dentro de la respuesta exitosa
+          this.mostrarErrorModal(response.error);
         }
         this.isUpdating = false;
       },
       error: (e) => {
-        this.mostrarErrorModal(e.error?.error || 'Error al subir la imagen');
+        const errorMsg = e.error?.error || e.error?.message || e.message || 'Error al subir la imagen';
+        this.mostrarErrorModal(errorMsg);
         this.isUpdating = false;
       }
     });
@@ -396,12 +410,18 @@ export class DashboardComponent implements OnInit {
     this.mensajeModal = msg;
     this.mensajeErrorModal = '';
     setTimeout(() => this.mensajeModal = '', 4000);
+
+    // Mostrar toast de éxito
+    this.notification.success(msg, 'Exitoso');
   }
 
   private mostrarErrorModal(msg: string) {
     this.mensajeErrorModal = msg;
     this.mensajeModal = '';
     setTimeout(() => this.mensajeErrorModal = '', 5000);
+
+    // Mostrar toast de error (rojo)
+    this.notification.error(msg, 'Error');
   }
 
   getNivelDisplay(nivel: string): string {

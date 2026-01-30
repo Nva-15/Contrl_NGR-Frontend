@@ -480,10 +480,10 @@
                 <div class="col-md-8">
                   <input type="file"
                          class="form-control mb-2"
-                         accept=".jpg,.jpeg,.png,.gif"
+                         accept="image/jpeg,image/png,image/gif,image/bmp,.jpg,.jpeg,.png,.gif,.bmp"
                          (change)="onFileSelectedModal($event)"
                          #fileInputModal>
-                  <small class="text-muted">Formatos: JPG, PNG, GIF (máx. 5MB)</small>
+                  <small class="text-muted">Formatos: JPG, PNG, GIF, BMP (máx. 5MB). <strong>WebP no soportado</strong></small>
                 </div>
                 <div class="col-md-4 text-end">
                   <button class="btn btn-outline-secondary btn-sm me-2"
