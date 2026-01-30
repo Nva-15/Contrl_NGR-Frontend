@@ -7,7 +7,9 @@
         <img src="http://localhost:8080/img/Logo.PNG"
              alt="Control NGR"
              class="img-fluid mb-2"
-             style="max-height: 80px;">
+             width="120"
+             height="80"
+             style="max-height: 80px; object-fit: contain;">
         <small class="text-white-50 d-block">Sistema de Asistencia</small>
       </div>
 
@@ -69,10 +71,14 @@
 
       <div class="p-3 bg-primary-dark border-top border-white-50">
         <div class="d-flex align-items-center mb-2">
-           <img [src]="fotoUrl" 
+           <img [src]="fotoUrl"
                (error)="onImageError($event)"
-               class="rounded-circle border border-white me-2 bg-white" 
-               width="40" height="40" style="object-fit: cover;">
+               class="rounded-circle border border-white me-2 bg-white"
+               width="40"
+               height="40"
+               loading="lazy"
+               decoding="async"
+               style="object-fit: cover;">
                
            <div class="overflow-hidden">
              <div class="text-white fw-bold text-truncate" style="font-size: 0.9rem;">
@@ -95,8 +101,10 @@
       <div class="d-md-none bg-ngr-header p-3 text-white d-flex justify-content-between align-items-center sticky-top shadow-sm">
         <img src="http://localhost:8080/img/Logo.PNG"
              alt="Control NGR"
+             width="52"
              height="35"
-             class="d-inline-block">
+             class="d-inline-block"
+             style="object-fit: contain;">
         <a class="btn btn-outline-light btn-sm" routerLink="/dashboard">
           <i class="bi bi-house-door"></i>
         </a>

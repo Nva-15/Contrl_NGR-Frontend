@@ -5,17 +5,21 @@
       <a class="navbar-brand fw-bold" href="#">
         <img src="http://localhost:8080/img/Logo.PNG"
              alt="Control NGR"
-             height="40"
-             class="d-inline-block align-middle">
+             width="90"
+             height="55"
+             class="d-inline-block align-middle"
+             style="object-fit: contain;">
       </a>
       
       <div class="navbar-nav ms-auto">
         <div class="nav-item dropdown">
           <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
-            <img [src]="fotoUrl" 
-                 width="30" height="30" 
+            <img [src]="fotoUrl"
+                 width="30" height="30"
                  class="rounded-circle me-2 border"
                  alt="Perfil"
+                 loading="lazy"
+                 decoding="async"
                  (error)="onImageError($event)"
                  style="object-fit: cover;">
             {{ currentEmpleado?.nombre?.split(' ')[0] }} 
@@ -109,10 +113,15 @@
             
             <div class="d-flex flex-column flex-sm-row align-items-center justify-content-center gap-4">
               <div class="position-relative">
-                <img [src]="fotoUrl" 
-                     class="rounded-circle border border-4 border-white shadow profile-img-responsive" 
+                <img [src]="fotoUrl"
+                     class="rounded-circle border border-4 border-white shadow profile-img-responsive"
                      alt="Foto"
-                     (error)="onImageError($event)">
+                     width="150"
+                     height="150"
+                     loading="lazy"
+                     decoding="async"
+                     (error)="onImageError($event)"
+                     style="object-fit: cover;">
                 <span class="position-absolute bottom-0 end-0 p-2 bg-success border border-light rounded-circle"></span>
               </div>
 
@@ -381,9 +390,13 @@
           <div class="text-center mb-4">
             <img [src]="fotoPreviewModal || fotoUrl"
                  class="rounded-circle border border-3 shadow mb-3"
-                 style="width: 120px; height: 120px; object-fit: cover;"
+                 width="120"
+                 height="120"
+                 loading="lazy"
+                 decoding="async"
                  (error)="onImageError($event)"
-                 alt="Foto de perfil">
+                 alt="Foto de perfil"
+                 style="object-fit: cover;">
             <h4 class="mb-1">{{ currentEmpleado?.nombre }}</h4>
             <span class="badge bg-secondary">{{ getRolDisplay(currentEmpleado?.rol) }}</span>
           </div>

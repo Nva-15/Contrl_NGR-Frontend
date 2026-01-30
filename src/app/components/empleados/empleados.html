@@ -124,11 +124,15 @@
                 <td class="ps-3">
                   <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                      <img [src]="getFotoUrl(emp.foto, emp.nombre)" 
+                      <img [src]="getFotoUrl(emp.foto, emp.nombre)"
                            (error)="handleImageError($event, emp.nombre)"
-                           class="rounded-circle me-3" 
+                           class="rounded-circle me-3"
                            alt="{{emp.nombre}}"
-                           style="width: 50px; height: 50px; object-fit: cover;">
+                           width="50"
+                           height="50"
+                           loading="lazy"
+                           decoding="async"
+                           style="object-fit: cover;">
                     </div>
                     <div class="flex-grow-1">
                       <div class="fw-bold">{{ emp.nombre }}</div>
@@ -469,7 +473,11 @@
                     <div class="card-body text-center">
                       <img [src]="fotoPreview || getFotoUrl(fotoActual || empForm.get('foto')?.value, empForm.get('nombre')?.value)"
                            (error)="handleImageError($event, empForm.get('nombre')?.value)"
-                           class="img-fluid rounded mb-3" 
+                           class="img-fluid rounded mb-3"
+                           width="200"
+                           height="200"
+                           loading="lazy"
+                           decoding="async"
                            style="max-height: 200px; object-fit: cover;"
                            alt="Preview de imagen">
                       <small class="text-muted d-block">
@@ -668,7 +676,11 @@
               <img [src]="getFotoUrl(empleadoAEliminar.foto, empleadoAEliminar.nombre)"
                    (error)="handleImageError($event, empleadoAEliminar.nombre)"
                    class="rounded-circle me-3"
-                   style="width: 50px; height: 50px; object-fit: cover;">
+                   width="50"
+                   height="50"
+                   loading="lazy"
+                   decoding="async"
+                   style="object-fit: cover;">
               <div>
                 <strong>{{ empleadoAEliminar.nombre }}</strong><br>
                 <small class="text-muted">DNI: {{ empleadoAEliminar.dni }}</small>

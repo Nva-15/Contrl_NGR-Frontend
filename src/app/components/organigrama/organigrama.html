@@ -22,10 +22,12 @@
             <div class="card border-success border-2 shadow-sm cumple-hoy-card">
               <div class="card-body p-2">
                 <div class="d-flex align-items-center">
-                  <img [src]="getFoto(emp)" 
-                       class="rounded-circle me-2" 
-                       width="40" 
+                  <img [src]="getFoto(emp)"
+                       class="rounded-circle me-2"
+                       width="40"
                        height="40"
+                       loading="lazy"
+                       decoding="async"
                        style="object-fit: cover;"
                        (error)="onImageError($event)">
                   <div class="flex-grow-1">
@@ -52,10 +54,12 @@
             <div class="card border-0 shadow-sm">
               <div class="card-body p-2">
                 <div class="d-flex align-items-center">
-                  <img [src]="getFoto(emp)" 
-                       class="rounded-circle me-2" 
-                       width="35" 
+                  <img [src]="getFoto(emp)"
+                       class="rounded-circle me-2"
+                       width="35"
                        height="35"
+                       loading="lazy"
+                       decoding="async"
                        style="object-fit: cover;"
                        (error)="onImageError($event)">
                   <div class="flex-grow-1">
@@ -113,8 +117,10 @@
              class="pyramid-card card-jefe"
              (click)="seleccionarEmpleado(emp)">
           <div class="card-inner">
-            <img [src]="getFoto(emp)" 
+            <img [src]="getFoto(emp)"
                  class="emp-img"
+                 loading="lazy"
+                 decoding="async"
                  (error)="onImageError($event)"
                  alt="{{ emp.nombre }}">
             <div class="emp-info">
@@ -139,8 +145,10 @@
              class="pyramid-card card-supervisor"
              (click)="seleccionarEmpleado(emp)">
           <div class="card-inner">
-            <img [src]="getFoto(emp)" 
+            <img [src]="getFoto(emp)"
                  class="emp-img"
+                 loading="lazy"
+                 decoding="async"
                  (error)="onImageError($event)"
                  alt="{{ emp.nombre }}">
             <div class="emp-info">
@@ -165,8 +173,10 @@
              class="pyramid-card card-tecnico"
              (click)="seleccionarEmpleado(emp)">
           <div class="card-inner">
-            <img [src]="getFoto(emp)" 
+            <img [src]="getFoto(emp)"
                  class="emp-img"
+                 loading="lazy"
+                 decoding="async"
                  (error)="onImageError($event)"
                  alt="{{ emp.nombre }}">
             <div class="emp-info">
@@ -191,8 +201,10 @@
              class="pyramid-card card-hd"
              (click)="seleccionarEmpleado(emp)">
           <div class="card-inner">
-            <img [src]="getFoto(emp)" 
+            <img [src]="getFoto(emp)"
                  class="emp-img"
+                 loading="lazy"
+                 decoding="async"
                  (error)="onImageError($event)"
                  alt="{{ emp.nombre }}">
             <div class="emp-info">
@@ -217,8 +229,10 @@
              class="pyramid-card card-noc"
              (click)="seleccionarEmpleado(emp)">
           <div class="card-inner">
-            <img [src]="getFoto(emp)" 
+            <img [src]="getFoto(emp)"
                  class="emp-img"
+                 loading="lazy"
+                 decoding="async"
                  (error)="onImageError($event)"
                  alt="{{ emp.nombre }}">
             <div class="emp-info">
@@ -279,10 +293,12 @@
         <div *ngIf="!isLoadingDetalle && empleadoSeleccionado" class="row">
           <!-- Columna izquierda: Solo foto y nombre -->
           <div class="col-md-4 text-center">
-            <img [src]="getFoto(empleadoSeleccionado)" 
+            <img [src]="getFoto(empleadoSeleccionado)"
                  class="rounded-circle border border-4 border-primary shadow mb-3"
-                 width="150" 
+                 width="150"
                  height="150"
+                 loading="lazy"
+                 decoding="async"
                  style="object-fit: cover;"
                  (error)="onImageError($event)"
                  alt="{{ empleadoSeleccionado.nombre }}">
