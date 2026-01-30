@@ -29,17 +29,17 @@ export class EmpleadosComponent implements OnInit {
   notification = inject(NotificationService);
 
   empForm: FormGroup;
-  
+
   empleados: EmpleadoResponse[] = [];
   empleadosFiltrados: EmpleadoResponse[] = [];
-  
+
   vista: 'lista' | 'formulario' = 'lista';
   isEditing = false;
   isLoading = false;
   mensaje = '';
   mensajeError = '';
   filtroBusqueda = '';
-  
+
   tipoDocumento: 'DNI' | 'CE' = 'DNI';
   fotoPreview: string | ArrayBuffer | null = null;
   fotoFile: File | null = null;
@@ -47,14 +47,13 @@ export class EmpleadosComponent implements OnInit {
 
   fechaHoy = '';
 
-  // Modal de confirmación para eliminar
   mostrarModalEliminar = false;
   empleadoAEliminar: EmpleadoResponse | null = null;
 
   roles = [
     { value: 'admin', label: 'Administrador' },
     { value: 'supervisor', label: 'Supervisor' },
-    { value: 'tecnico', label: 'Técnico' },
+    { value: 'tecnico', label: 'Tecnico' },
     { value: 'hd', label: 'HD' },
     { value: 'noc', label: 'NOC' }
   ];
@@ -62,7 +61,7 @@ export class EmpleadosComponent implements OnInit {
   niveles = [
     { value: 'jefe', label: 'Jefe/Gerente' },
     { value: 'supervisor', label: 'Supervisor' },
-    { value: 'tecnico', label: 'Técnico' },
+    { value: 'tecnico', label: 'Tecnico' },
     { value: 'hd', label: 'HD' },
     { value: 'bo', label: 'Back Office (BO)' },
     { value: 'noc', label: 'NOC' }
@@ -80,7 +79,7 @@ export class EmpleadosComponent implements OnInit {
     this.cargarEmpleados();
     this.setupListeners();
   }
-  
+
   initForm(): FormGroup {
     return this.fb.group({
       id: [null],
@@ -106,7 +105,7 @@ export class EmpleadosComponent implements OnInit {
   setupListeners() {
     this.empForm.get('dni')?.valueChanges.subscribe(value => {
       if (value && !this.isEditing) {
-        this.empForm.patchValue({ 
+        this.empForm.patchValue({
           username: value,
           email: `${value}@ngr.com.pe`
         }, { emitEvent: false });
@@ -117,19 +116,19 @@ export class EmpleadosComponent implements OnInit {
       this.tipoDocumento = tipo;
       const dniControl = this.empForm.get('dni');
       dniControl?.setValue('');
-      
+
       if (tipo === 'DNI') {
         dniControl?.setValidators([
-          Validators.required, 
-          Validators.pattern(/^[0-9]*$/), 
-          Validators.minLength(8), 
+          Validators.required,
+          Validators.pattern(/^[0-9]*$/),
+          Validators.minLength(8),
           Validators.maxLength(8)
         ]);
       } else {
         dniControl?.setValidators([
-          Validators.required, 
-          Validators.pattern(/^[0-9]*$/), 
-          Validators.minLength(11), 
+          Validators.required,
+          Validators.pattern(/^[0-9]*$/),
+          Validators.minLength(11),
           Validators.maxLength(11)
         ]);
       }
@@ -149,11 +148,9 @@ export class EmpleadosComponent implements OnInit {
 
     const formValue = this.empForm.getRawValue();
 
-    // Funciones auxiliares para comparación segura
     const safeStr = (val: any): string => (val || '').toString().trim();
     const safeLower = (val: any): string => safeStr(val).toLowerCase();
 
-    // Verificar cada campo individualmente para debug
     const cambioNombre = safeStr(formValue.nombre) !== safeStr(this.empleadoOriginal.nombre);
     const cambioCargo = safeStr(formValue.cargo) !== safeStr(this.empleadoOriginal.cargo);
     const cambioNivel = safeStr(formValue.nivel) !== safeStr(this.empleadoOriginal.nivel);
@@ -173,46 +170,24 @@ export class EmpleadosComponent implements OnInit {
       cambioCumple || cambioIngreso || cambioHobby || cambioDesc || cambioEmail ||
       cambioUsername || cambioPassword || cambioUsuarioActivo || cambioActivo || cambioFoto;
 
-    // Debug logging - descomentar para ver en consola
-    console.log('🔍 checkFormChanges:', {
-      cambioNombre, cambioCargo, cambioNivel, cambioRol,
-      cambioHobby, cambioDesc, cambioEmail,
-      cambioPassword, cambioUsuarioActivo, cambioActivo, cambioFoto,
-      resultado: cambiosDetectados,
-      formValue: { nombre: formValue.nombre, hobby: formValue.hobby, descripcion: formValue.descripcion },
-      original: { nombre: this.empleadoOriginal.nombre, hobby: this.empleadoOriginal.hobby, descripcion: this.empleadoOriginal.descripcion }
-    });
-
     this.formHasChanges = cambiosDetectados;
-    this.cdr.detectChanges(); // Forzar actualización de la vista
+    this.cdr.detectChanges();
   }
 
   guardar() {
-    console.log('🚀 guardar() llamado', {
-      formValid: this.empForm.valid,
-      formInvalid: this.empForm.invalid,
-      isEditing: this.isEditing,
-      formHasChanges: this.formHasChanges
-    });
-
-    // En modo edición, validar de forma más permisiva (ignorar password vacío)
     if (this.isEditing) {
       const errores = this.getFormValidationErrors();
-      // Ignorar error de password si está vacío
       const passwordValue = this.empForm.get('password')?.value;
       if (errores.password && (!passwordValue || passwordValue.length === 0)) {
         delete errores.password;
       }
 
-      // Si hay otros errores además de password, rechazar
       if (Object.keys(errores).length > 0) {
-        console.log('❌ Formulario inválido en edición, campos con error:', errores);
         this.empForm.markAllAsTouched();
         this.mostrarError('Por favor, complete todos los campos requeridos correctamente.');
         return;
       }
     } else if (this.empForm.invalid) {
-      console.log('❌ Formulario inválido, campos con error:', this.getFormValidationErrors());
       this.empForm.markAllAsTouched();
       this.mostrarError('Por favor, complete todos los campos requeridos correctamente.');
       return;
@@ -222,18 +197,14 @@ export class EmpleadosComponent implements OnInit {
     this.mensajeError = '';
 
     const formValue = this.empForm.getRawValue();
-    console.log('📦 Datos a enviar:', formValue);
 
     if (this.isEditing && formValue.id) {
-      console.log('✏️ Actualizando empleado ID:', formValue.id);
       this.actualizarEmpleado(formValue);
     } else {
-      console.log('➕ Creando nuevo empleado');
       this.crearEmpleado(formValue);
     }
   }
 
-  // Método auxiliar para debug de errores de validación
   private getFormValidationErrors(): any {
     const errors: any = {};
     Object.keys(this.empForm.controls).forEach(key => {
@@ -247,7 +218,7 @@ export class EmpleadosComponent implements OnInit {
 
   private crearEmpleado(formValue: any) {
     const empleadoData = this.prepararPayloadCreacion(formValue);
-    
+
     this.empService.createEmpleado(empleadoData).subscribe({
       next: (response) => {
         if (this.fotoFile && response.id) {
@@ -262,16 +233,13 @@ export class EmpleadosComponent implements OnInit {
 
   private actualizarEmpleado(formValue: any) {
     const empleadoData = this.prepararPayloadEdicion(formValue);
-    console.log('📝 Payload de edición:', empleadoData);
-    console.log('🖼️ Archivo de foto:', this.fotoFile);
 
     if (Object.keys(empleadoData).length === 0 && !this.fotoFile) {
-      console.log('⚠️ No hay cambios para actualizar');
       this.isLoading = false;
       this.mostrarMsg('No se detectaron cambios para actualizar');
       return;
     }
-    
+
     if (Object.keys(empleadoData).length > 0) {
       this.empService.updateEmpleado(formValue.id, empleadoData).subscribe({
         next: () => {
@@ -299,15 +267,14 @@ export class EmpleadosComponent implements OnInit {
     }).subscribe({
       next: (response: any) => {
         if (response.success) {
-          this.procesarExito(this.isEditing ? 
-            'Empleado e imagen actualizados correctamente' : 
+          this.procesarExito(this.isEditing ?
+            'Empleado e imagen actualizados correctamente' :
             'Empleado creado exitosamente');
         }
       },
-      error: (error) => {
-        console.error('Error subiendo imagen:', error);
-        this.procesarExito(this.isEditing ? 
-          'Empleado actualizado (error en imagen)' : 
+      error: () => {
+        this.procesarExito(this.isEditing ?
+          'Empleado actualizado (error en imagen)' :
           'Empleado creado (error en imagen)');
       }
     });
@@ -339,8 +306,6 @@ export class EmpleadosComponent implements OnInit {
     const payload: any = {};
     const original = this.empleadoOriginal;
 
-    // 🔥 NUEVA LÓGICA: Solo enviar campos que realmente cambiaron
-    
     if (formValue.nombre.trim() !== original.nombre) {
       payload.nombre = formValue.nombre.trim();
     }
@@ -353,12 +318,9 @@ export class EmpleadosComponent implements OnInit {
       payload.nivel = formValue.nivel;
     }
 
-    // 🔥 CRÍTICO: NO enviar rol si no es admin o si no cambió
-    // Solo Admin puede cambiar roles explícitamente
     if (formValue.rol !== original.rol && this.authService.isAdmin()) {
       payload.rol = formValue.rol;
     }
-    // Si no es admin, NO enviar rol (el backend lo preservará)
 
     if (formValue.usuarioActivo !== original.usuarioActivo) {
       payload.usuarioActivo = formValue.usuarioActivo;
@@ -376,21 +338,18 @@ export class EmpleadosComponent implements OnInit {
       payload.ingreso = formValue.ingreso;
     }
 
-    // Hobby: enviar string vacío si el usuario borró el contenido (no null)
     const hobby = formValue.hobby?.trim() ?? '';
     const descripcion = formValue.descripcion?.trim() ?? '';
     const email = formValue.email?.trim().toLowerCase();
 
-    // Comparar hobby: si cambió (incluyendo de "algo" a vacío), incluir en payload
     const originalHobby = original.hobby ?? '';
     if (hobby !== originalHobby) {
-      payload.hobby = hobby;  // Enviar string vacío para limpiar, no null
+      payload.hobby = hobby;
     }
 
-    // Comparar descripcion: si cambió (incluyendo de "algo" a vacío), incluir en payload
     const originalDescripcion = original.descripcion ?? '';
     if (descripcion !== originalDescripcion) {
-      payload.descripcion = descripcion;  // Enviar string vacío para limpiar, no null
+      payload.descripcion = descripcion;
     }
 
     if (email !== (original.email || '')) {
@@ -407,11 +366,8 @@ export class EmpleadosComponent implements OnInit {
       payload.password = password;
     }
 
-    // 🔥 CRÍTICO: NO enviar foto si no cambió o es la por defecto
-    // La imagen se maneja por separado con ImageController
-    // NO enviar "img/perfil.png" automáticamente
-    if (formValue.foto && 
-        formValue.foto !== 'img/perfil.png' && 
+    if (formValue.foto &&
+        formValue.foto !== 'img/perfil.png' &&
         formValue.foto !== original.foto) {
       payload.foto = formValue.foto;
     }
@@ -435,24 +391,24 @@ export class EmpleadosComponent implements OnInit {
 
   puedeEditarEmpleado(empleado: EmpleadoResponse): boolean {
     const userRole = this.authService.getUserRole();
-    
+
     if (userRole === 'admin') {
       return true;
     }
-    
+
     if (userRole === 'supervisor') {
       const currentUser = this.authService.getCurrentEmpleado();
       const esMiPerfil = currentUser && currentUser.id === empleado.id;
-      
+
       if (esMiPerfil) {
         return true;
       }
-      
+
       const empleadoRol = empleado.rol?.toLowerCase();
       const rolesPermitidos = ['tecnico', 'hd', 'noc'];
       return rolesPermitidos.includes(empleadoRol || '');
     }
-    
+
     return false;
   }
 
@@ -477,7 +433,6 @@ export class EmpleadosComponent implements OnInit {
     return 'Editar empleado';
   }
 
-  // PERMISOS ESPECÍFICOS PARA SUPERVISOR
   puedeEliminarEmpleado(empleado: EmpleadoResponse): boolean {
     const userRole = this.authService.getUserRole();
 
@@ -489,18 +444,15 @@ export class EmpleadosComponent implements OnInit {
       const currentUser = this.authService.getCurrentEmpleado();
       const esMiPerfil = currentUser && currentUser.id === empleado.id;
 
-      // No puede eliminarse a sí mismo
       if (esMiPerfil) {
         return false;
       }
 
-      // No puede eliminar admin ni otros supervisores
       const empleadoRol = empleado.rol?.toLowerCase();
       if (empleadoRol === 'admin' || empleadoRol === 'supervisor') {
         return false;
       }
 
-      // Solo puede eliminar tecnico, hd, noc
       const rolesPermitidos = ['tecnico', 'hd', 'noc'];
       return rolesPermitidos.includes(empleadoRol || '');
     }
@@ -519,18 +471,15 @@ export class EmpleadosComponent implements OnInit {
       const currentUser = this.authService.getCurrentEmpleado();
       const esMiPerfil = currentUser && currentUser.id === empleado.id;
 
-      // No puede cambiar su propio estado
       if (esMiPerfil) {
         return false;
       }
 
-      // No puede cambiar estado de admin ni otros supervisores
       const empleadoRol = empleado.rol?.toLowerCase();
       if (empleadoRol === 'admin' || empleadoRol === 'supervisor') {
         return false;
       }
 
-      // Solo puede cambiar estado de tecnico, hd, noc
       const rolesPermitidos = ['tecnico', 'hd', 'noc'];
       return rolesPermitidos.includes(empleadoRol || '');
     }
@@ -549,7 +498,7 @@ export class EmpleadosComponent implements OnInit {
 
       if (userRole === 'supervisor') {
         if (esMiPerfil) {
-          return 'No puede eliminarse a sí mismo';
+          return 'No puede eliminarse a si mismo';
         }
         if (empleadoRol === 'admin') {
           return 'No puede eliminar administradores';
@@ -590,7 +539,6 @@ export class EmpleadosComponent implements OnInit {
     return empleado.usuarioActivo ? 'Desactivar usuario' : 'Activar usuario';
   }
 
-  // Controla si puede cambiar estado en el formulario de edición
   puedeCambiarEstadoEnFormulario(): boolean {
     if (!this.isEditing || !this.empleadoOriginal) {
       return true;
@@ -606,12 +554,10 @@ export class EmpleadosComponent implements OnInit {
       const currentUser = this.authService.getCurrentEmpleado();
       const esMiPerfil = currentUser && currentUser.id === this.empleadoOriginal.id;
 
-      // No puede cambiar su propio estado
       if (esMiPerfil) {
         return false;
       }
 
-      // No puede cambiar estado de admin ni otros supervisores
       const empleadoRol = this.empleadoOriginal.rol?.toLowerCase();
       if (empleadoRol === 'admin' || empleadoRol === 'supervisor') {
         return false;
@@ -625,21 +571,21 @@ export class EmpleadosComponent implements OnInit {
 
   getEstadoTooltipCompleto(empleado: EmpleadoResponse): string {
     const estados = [];
-    
+
     if (empleado.usuarioActivo) {
-      estados.push('✓ Puede iniciar sesión');
+      estados.push('Puede iniciar sesion');
     } else {
-      estados.push('✗ No puede iniciar sesión');
+      estados.push('No puede iniciar sesion');
     }
-    
+
     if (empleado.activo) {
-      estados.push('✓ Activo en empresa');
-      estados.push('✓ Aparece en organigrama');
+      estados.push('Activo en empresa');
+      estados.push('Aparece en organigrama');
     } else {
-      estados.push('✗ Inactivo en empresa');
-      estados.push('✗ Oculto en organigrama');
+      estados.push('Inactivo en empresa');
+      estados.push('Oculto en organigrama');
     }
-    
+
     return estados.join('\n');
   }
 
@@ -659,7 +605,7 @@ export class EmpleadosComponent implements OnInit {
     this.fotoPreview = null;
     this.fotoFile = null;
     this.formHasChanges = false;
-    
+
     const tipo = (emp.dni.length > 8) ? 'CE' : 'DNI';
     this.tipoDocumento = tipo;
 
@@ -682,7 +628,7 @@ export class EmpleadosComponent implements OnInit {
     };
 
     this.fotoActual = emp.foto || 'img/perfil.png';
-    
+
     if (this.fotoActual && this.fotoActual !== 'img/perfil.png') {
       this.fotoPreview = this.getFotoUrl(this.fotoActual, emp.nombre);
     } else {
@@ -709,7 +655,6 @@ export class EmpleadosComponent implements OnInit {
       activo: emp.activo ?? true
     }, { emitEvent: false });
 
-    // Limpiar validadores de password en modo edición (password vacío es válido)
     const passwordControl = this.empForm.get('password');
     if (passwordControl) {
       passwordControl.clearValidators();
@@ -729,13 +674,13 @@ export class EmpleadosComponent implements OnInit {
     const accion = nuevoEstado ? 'activar' : 'desactivar';
     const tipo = nuevoEstado ? 'success' : 'warning';
     const confirmText = nuevoEstado
-      ? '¿Activar este usuario? Podrá iniciar sesión y aparecerá en el sistema.'
-      : '¿Desactivar este usuario? No podrá iniciar sesión pero permanecerá en registros.';
+      ? 'Activar este usuario? Podra iniciar sesion y aparecera en el sistema.'
+      : 'Desactivar este usuario? No podra iniciar sesion pero permanecera en registros.';
 
     const confirmado = await this.notification.confirm({
       title: nuevoEstado ? 'Activar usuario' : 'Desactivar usuario',
       message: confirmText,
-      confirmText: nuevoEstado ? 'Sí, activar' : 'Sí, desactivar',
+      confirmText: nuevoEstado ? 'Si, activar' : 'Si, desactivar',
       cancelText: 'Cancelar',
       type: tipo as 'success' | 'warning'
     });
@@ -786,7 +731,6 @@ export class EmpleadosComponent implements OnInit {
         this.isLoading = false;
       },
       error: (e) => {
-        console.error('Error exportando:', e);
         this.notification.error('Error al exportar datos a Excel', 'Error');
         this.isLoading = false;
       }
@@ -810,7 +754,7 @@ export class EmpleadosComponent implements OnInit {
             { header: 'Rol', dataKey: 'Rol' },
             { header: 'Estado', dataKey: 'Activo' }
           ];
-          
+
           this.exportService.exportToPDF(datos, columnas, {
             title: 'Reporte de Empleados - NGR',
             filename: 'empleados_ngr'
@@ -821,7 +765,6 @@ export class EmpleadosComponent implements OnInit {
         this.isLoading = false;
       },
       error: (e) => {
-        console.error('Error exportando PDF:', e);
         this.notification.error('Error al exportar datos a PDF', 'Error');
         this.isLoading = false;
       }
@@ -833,7 +776,7 @@ export class EmpleadosComponent implements OnInit {
     if (file) {
       const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
       if (!validTypes.includes(file.type)) {
-        this.mostrarError('Solo se permiten imágenes (JPEG, PNG, GIF)');
+        this.mostrarError('Solo se permiten imagenes (JPEG, PNG, GIF)');
         event.target.value = '';
         return;
       }
@@ -849,17 +792,12 @@ export class EmpleadosComponent implements OnInit {
       const reader = new FileReader();
       reader.onload = (e) => {
         this.fotoPreview = e.target?.result || null;
-        // Forzar detección de cambios después de actualizar preview
         this.cdr.detectChanges();
       };
       reader.readAsDataURL(file);
 
-      // No actualizar el campo foto en el form (se maneja por separado)
-
       this.empForm.markAsDirty();
       this.checkFormChanges();
-
-      // Forzar detección de cambios para habilitar botón guardar
       this.cdr.detectChanges();
     }
   }
@@ -873,7 +811,6 @@ export class EmpleadosComponent implements OnInit {
       this.getFotoUrl(this.fotoActual, this.empForm.get('nombre')?.value) :
       this.getAvatarPlaceholder(this.empForm.get('nombre')?.value);
     this.checkFormChanges();
-    // Forzar detección de cambios para actualizar botón guardar
     this.cdr.detectChanges();
   }
 
@@ -899,7 +836,6 @@ export class EmpleadosComponent implements OnInit {
         this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error cargando empleados:', error);
         this.mostrarError('Error al cargar la lista de empleados');
         this.isLoading = false;
       }
@@ -949,9 +885,9 @@ export class EmpleadosComponent implements OnInit {
       return;
     }
 
-    this.empleadosFiltrados = this.empleados.filter(e => 
-      e.nombre.toLowerCase().includes(term) || 
-      e.dni.includes(term) || 
+    this.empleadosFiltrados = this.empleados.filter(e =>
+      e.nombre.toLowerCase().includes(term) ||
+      e.dni.includes(term) ||
       (e.email && e.email.toLowerCase().includes(term)) ||
       (e.cargo && e.cargo.toLowerCase().includes(term)) ||
       (e.username && e.username.toLowerCase().includes(term))
@@ -1007,11 +943,11 @@ export class EmpleadosComponent implements OnInit {
     if (!fotoPath || fotoPath === 'img/perfil.png') {
       return this.getAvatarPlaceholder(nombre);
     }
-    
+
     if (fotoPath.startsWith('http')) {
       return fotoPath;
     }
-    
+
     const baseUrl = 'http://localhost:8080';
     return `${baseUrl}/${fotoPath}`;
   }
@@ -1028,7 +964,7 @@ export class EmpleadosComponent implements OnInit {
     switch(rol?.toLowerCase()) {
       case 'admin': return 'Administrador';
       case 'supervisor': return 'Supervisor';
-      case 'tecnico': return 'Técnico';
+      case 'tecnico': return 'Tecnico';
       case 'hd': return 'HD';
       case 'noc': return 'NOC';
       default: return rol || 'Sin rol';
@@ -1039,7 +975,7 @@ export class EmpleadosComponent implements OnInit {
     switch(nivel?.toLowerCase()) {
       case 'jefe': return 'Jefe/Gerente';
       case 'supervisor': return 'Supervisor';
-      case 'tecnico': return 'Técnico';
+      case 'tecnico': return 'Tecnico';
       case 'hd': return 'HD';
       case 'bo': return 'Back Office';
       case 'noc': return 'NOC';
@@ -1054,16 +990,13 @@ export class EmpleadosComponent implements OnInit {
       return this.empForm.valid;
     }
 
-    // En modo edición: verificar campos críticos (ignorando password vacío)
     const tieneCambios = this.formHasChanges || this.fotoFile !== null;
 
-    // Verificar solo campos críticos para edición
     const nombreValido = this.empForm.get('nombre')?.valid ?? true;
     const cargoValido = this.empForm.get('cargo')?.valid ?? true;
     const nivelValido = this.empForm.get('nivel')?.valid ?? true;
     const dniValido = this.empForm.get('dni')?.valid ?? true;
 
-    // Password es opcional en edición - verificar solo si tiene valor
     const passwordValue = this.empForm.get('password')?.value;
     const passwordValido = !passwordValue || passwordValue.length === 0 || passwordValue.length >= 6;
 
@@ -1072,14 +1005,14 @@ export class EmpleadosComponent implements OnInit {
 
   getEstadoTooltip(estado: boolean | undefined): string {
     if (estado === undefined) return 'Estado no definido';
-    return estado 
-      ? 'Usuario activo - Puede iniciar sesión y aparece en el organigrama' 
-      : 'Usuario inactivo - No puede iniciar sesión pero permanece en registros';
+    return estado
+      ? 'Usuario activo - Puede iniciar sesion y aparece en el organigrama'
+      : 'Usuario inactivo - No puede iniciar sesion pero permanece en registros';
   }
 
   getEstadoTexto(estado: boolean | undefined): string {
     if (estado === undefined) return 'Indefinido';
-    return estado ? '✓ Activo' : '✗ Inactivo';
+    return estado ? 'Activo' : 'Inactivo';
   }
 
   getEstadoColor(estado: boolean | undefined): string {

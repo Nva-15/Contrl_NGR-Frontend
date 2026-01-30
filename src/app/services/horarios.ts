@@ -25,7 +25,6 @@ export class HorariosService {
     );
   }
 
-  // Vista consolidada de todos los empleados con sus horarios semanales
   getVistaConsolidada(rol?: string): Observable<HorarioSemanal[]> {
     let params = new HttpParams();
     if (rol) {
@@ -36,7 +35,6 @@ export class HorariosService {
     );
   }
 
-  // Crear o actualizar horario de un dia especifico
   guardarHorarioDia(empleadoId: number, diaSemana: string, horario: Partial<Horario>): Observable<HorarioResponse> {
     return this.http.put<HorarioResponse>(`${this.apiUrl}/empleado/${empleadoId}/dia/${diaSemana}`, horario).pipe(
       catchError(this.handleError)
@@ -85,32 +83,24 @@ export class HorariosService {
     );
   }
 
-  // Obtener horario semanal consolidado de un empleado individual
   getHorarioSemanalEmpleado(empleadoId: number): Observable<HorarioSemanal> {
     return this.http.get<HorarioSemanal>(`${this.apiUrl}/empleado/${empleadoId}/semanal`).pipe(
       catchError(this.handleError)
     );
   }
 
-  // Aplicar el mismo horario a multiples dias
   aplicarHorarioMultiplesDias(empleadoId: number, datos: any): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/empleado/${empleadoId}/dias-multiples`, datos).pipe(
       catchError(this.handleError)
     );
   }
 
-  // =====================================================
-  // HORARIOS SEMANALES POR FECHAS (NUEVO SISTEMA)
-  // =====================================================
-
-  // Generar una nueva semana de horarios
   generarSemana(request: HorarioSemanalRequest): Observable<HorarioSemanalResponse> {
     return this.http.post<HorarioSemanalResponse>(`${this.apiUrlSemanal}/generar`, request).pipe(
       catchError(this.handleError)
     );
   }
 
-  // Copiar una semana existente a nuevas fechas
   copiarSemana(semanaId: number, nuevaFechaInicio: string): Observable<HorarioSemanalResponse> {
     return this.http.post<HorarioSemanalResponse>(
       `${this.apiUrlSemanal}/${semanaId}/copiar?nuevaFechaInicio=${nuevaFechaInicio}`,
@@ -120,28 +110,24 @@ export class HorariosService {
     );
   }
 
-  // Listar todas las semanas
   getSemanasHorarios(): Observable<HorarioSemanalResponse[]> {
     return this.http.get<HorarioSemanalResponse[]>(this.apiUrlSemanal).pipe(
       catchError(this.handleError)
     );
   }
 
-  // Obtener semana por ID
   getSemanaById(id: number): Observable<HorarioSemanalResponse> {
     return this.http.get<HorarioSemanalResponse>(`${this.apiUrlSemanal}/${id}`).pipe(
       catchError(this.handleError)
     );
   }
 
-  // Obtener semana vigente (actual)
   getSemanaVigente(): Observable<HorarioSemanalResponse> {
     return this.http.get<HorarioSemanalResponse>(`${this.apiUrlSemanal}/vigente`).pipe(
       catchError(this.handleError)
     );
   }
 
-  // Obtener semana por fecha específica
   getSemanaPorFecha(fecha: string): Observable<HorarioSemanalResponse> {
     return this.http.get<HorarioSemanalResponse>(
       `${this.apiUrlSemanal}/por-fecha?fecha=${fecha}`
@@ -150,7 +136,6 @@ export class HorariosService {
     );
   }
 
-  // Actualizar un día específico del horario semanal
   actualizarDetalleDia(detalleId: number, datos: Partial<DetalleHorarioDia>): Observable<HorarioSemanalResponse> {
     return this.http.put<HorarioSemanalResponse>(
       `${this.apiUrlSemanal}/detalle/${detalleId}`,
@@ -160,7 +145,6 @@ export class HorariosService {
     );
   }
 
-  // Actualizar múltiples días con el mismo horario
   actualizarMultiplesDias(detalleIds: number[], datos: Partial<DetalleHorarioDia>): Observable<HorarioSemanalResponse> {
     return this.http.put<HorarioSemanalResponse>(
       `${this.apiUrlSemanal}/detalle/multiple`,
@@ -170,7 +154,6 @@ export class HorariosService {
     );
   }
 
-  // Cambiar el estado de una semana (borrador, activo, historico)
   cambiarEstadoSemana(semanaId: number, estado: string): Observable<HorarioSemanalResponse> {
     return this.http.put<HorarioSemanalResponse>(
       `${this.apiUrlSemanal}/${semanaId}/estado`,
@@ -180,7 +163,6 @@ export class HorariosService {
     );
   }
 
-  // Eliminar una semana (solo si está en borrador)
   eliminarSemana(semanaId: number): Observable<any> {
     return this.http.delete(`${this.apiUrlSemanal}/${semanaId}`).pipe(
       catchError(this.handleError)

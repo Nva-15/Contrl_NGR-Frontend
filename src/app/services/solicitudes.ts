@@ -11,7 +11,6 @@ export class SolicitudesService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8080/api/solicitudes';
 
-  // Método para obtener headers con token
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('token') || '';
     return new HttpHeaders({
@@ -64,7 +63,6 @@ export class SolicitudesService {
     return this.http.put<SolicitudResponse>(`${this.apiUrl}/gestionar/${id}`, payload);
   }
 
-  // Ahora el backend maneja el token en el header
   editarSolicitud(id: number, datos: any): Observable<any> {
     const headers = this.getHeaders();
     return this.http.put<any>(`${this.apiUrl}/editar/${id}`, datos, { headers }).pipe(

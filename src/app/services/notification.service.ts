@@ -28,7 +28,6 @@ export class NotificationService {
   private confirmSubject = new Subject<ConfirmDialog>();
   private confirmResponseSubject = new Subject<boolean>();
 
-  // Toasts
   get toasts$(): Observable<Toast[]> {
     return this.toastsSubject.asObservable();
   }
@@ -71,7 +70,6 @@ export class NotificationService {
     this.toastsSubject.next([...this.toasts]);
   }
 
-  // Confirm Dialog
   get confirm$(): Observable<ConfirmDialog> {
     return this.confirmSubject.asObservable();
   }

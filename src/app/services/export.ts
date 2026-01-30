@@ -20,7 +20,6 @@ interface ExportOptions {
 
 @Injectable({ providedIn: 'root' })
 export class ExportService {
-  // Exportar datos a Excel
   exportToExcel(data: any[], fileName: string, sheetName: string = 'Datos'): void {
     if (!data.length) {
       alert('No hay datos para exportar');
@@ -37,14 +36,12 @@ export class ExportService {
     saveAs(blob, `${fileName}.xlsx`);
   }
 
-  // Exportar datos a PDF
   exportToPDF(data: any[], columns: ColumnConfig[], options: ExportOptions = {}): void {
     if (!data.length) {
       alert('No hay datos para exportar');
       return;
     }
 
-    // Ajustar tamaño de fuente según número de columnas
     const numColumns = columns.length;
     let defaultFontSize = 8;
     if (numColumns >= 10) {
@@ -64,12 +61,10 @@ export class ExportService {
     const doc = new jsPDF(config.orientation, 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Título
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text(config.title, 10, 10);
 
-    // Fecha
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, 10, 15);
@@ -80,12 +75,10 @@ export class ExportService {
 
     const headers = columns.map(col => col.header);
 
-    // Calcular ancho disponible para la tabla
     const marginLeft = 5;
     const marginRight = 5;
     const availableWidth = pageWidth - marginLeft - marginRight;
 
-    // Configurar estilos de columnas
     const tableConfig: any = {
       startY: 19,
       head: [headers],
@@ -110,7 +103,6 @@ export class ExportService {
       tableWidth: availableWidth
     };
 
-    // Calcular anchos de columna proporcionales
     if (!config.autoColumnWidth && columns.length > 0) {
       const columnWidths = this.calcProportionalWidths(columns, data, availableWidth);
       tableConfig.columnStyles = columns.reduce((acc: any, _, idx) => {
@@ -124,36 +116,29 @@ export class ExportService {
     doc.save(`${config.filename}.pdf`);
   }
 
-  // Calcular anchos proporcionales para que quepan todas las columnas
   private calcProportionalWidths(columns: ColumnConfig[], data: any[], availableWidth: number): number[] {
-    // Calcular "peso" de cada columna basado en su contenido
     const weights = columns.map(col => {
       if (col.width) return col.width;
 
       let maxLen = col.header.length;
-      data.slice(0, 20).forEach(item => { // Solo revisar primeras 20 filas
+      data.slice(0, 20).forEach(item => {
         const val = item[col.dataKey];
         if (val) {
           const len = String(val).length;
-          if (len > maxLen) maxLen = Math.min(len, 30); // Máximo 30 caracteres
+          if (len > maxLen) maxLen = Math.min(len, 30);
         }
       });
 
-      // Columnas cortas (ID, Días) tienen peso mínimo
       if (maxLen <= 5) return 8;
       if (maxLen <= 10) return 15;
       if (maxLen <= 15) return 22;
       return Math.min(maxLen * 1.5, 40);
     });
 
-    // Calcular suma total de pesos
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-
-    // Distribuir el ancho disponible proporcionalmente
     return weights.map(w => (w / totalWeight) * availableWidth);
   }
 
-  // Calcular ancho de columna basado en contenido (método original)
   private calcWidth(header: string, data: any[], dataKey: string): number {
     let maxLen = header.length;
     data.forEach(item => {

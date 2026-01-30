@@ -33,8 +33,6 @@ export class ContactoService {
       _language: 'es'
     };
 
-    console.log('📤 Enviando mensaje a Formspree:', payload);
-
     return this.http.post(this.formspreeEndpoint, payload, { headers });
   }
 }

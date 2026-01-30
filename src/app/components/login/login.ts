@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth';
-// Cambiar: importar LoginRequest desde interfaces/auth.ts
 import { LoginRequest } from '../../interfaces/auth';
 
 @Component({
@@ -35,18 +34,14 @@ export class LoginComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    console.log('📤 Enviando credenciales:', this.credentials.username);
-    
     this.authService.login(this.credentials).subscribe({
       next: (response) => {
-        console.log('✅ Login exitoso, redirigiendo...');
         this.isLoading = false;
         this.router.navigate(['/dashboard']);
       },
       error: (error) => {
-        console.error('❌ Error en login:', error);
         this.isLoading = false;
-        this.errorMessage = error.error?.error || 'Error en el inicio de sesión. Verifica tus credenciales.';
+        this.errorMessage = error.error?.error || 'Error en el inicio de sesion. Verifica tus credenciales.';
       }
     });
   }

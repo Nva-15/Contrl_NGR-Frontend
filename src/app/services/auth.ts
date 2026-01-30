@@ -60,7 +60,6 @@ export class AuthService {
     return empleado ? JSON.parse(empleado) : null;
   }
 
-  // MÉTODOS DE CONTROL DE ROLES (ACTUALIZADOS)
   getUserRole(): string {
     const empleado = this.getCurrentEmpleado();
     if (empleado?.rol) return empleado.rol.toLowerCase();
@@ -93,34 +92,30 @@ export class AuthService {
     return this.getUserRole() === 'noc';
   }
 
-  // MÉTODO CRÍTICO: Verificar si puede gestionar empleados
   puedeGestionarEmpleados(): boolean {
     const rol = this.getUserRole();
     return rol === 'admin' || rol === 'supervisor';
   }
 
-  // NUEVO MÉTODO CRÍTICO: Permisos específicos para edición
   puedeEditarEmpleado(empleado: any): boolean {
     const userRole = this.getUserRole();
     const currentUser = this.getCurrentEmpleado();
     const esMiPerfil = currentUser && currentUser.id === empleado.id;
-    
+
     if (userRole === 'admin') {
       return true;
     }
-    
+
     if (userRole === 'supervisor') {
-      // ✅ Permitir editar su propio perfil
       if (esMiPerfil) {
         return true;
       }
-      
-      // ✅ Permitir editar técnicos, HD y NOC (pero NO otros supervisores ni admins)
+
       const rolesPermitidos = ['tecnico', 'hd', 'noc'];
       const empleadoRol = empleado.rol?.toLowerCase();
       return rolesPermitidos.includes(empleadoRol || '');
     }
-    
+
     return false;
   }
 
@@ -136,13 +131,12 @@ export class AuthService {
     });
   }
 
-  // Método para obtener el nombre del rol legible
   getRolDisplayName(): string {
     const rol = this.getUserRole();
     switch(rol) {
       case 'admin': return 'Administrador';
       case 'supervisor': return 'Supervisor';
-      case 'tecnico': return 'Técnico';
+      case 'tecnico': return 'Tecnico';
       case 'hd': return 'HD';
       case 'noc': return 'NOC';
       default: return 'Usuario';

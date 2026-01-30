@@ -13,7 +13,7 @@ import { HorarioSemanal, HorarioDia } from '../../interfaces/horario';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink], 
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
@@ -38,42 +38,37 @@ export class DashboardComponent implements OnInit {
   tipoMarcaje: 'entrada' | 'salida' = 'entrada';
   observaciones = '';
 
-  // Modal de actualización de datos
   mostrarModalPerfil = false;
   isUpdating = false;
   mensajeModal = '';
   mensajeErrorModal = '';
 
-  // Campos editables del modal
   descripcionEdit = '';
   hobbyEdit = '';
   fotoPreviewModal: string | null = null;
   fotoFileModal: File | null = null;
 
-  // Cambio de contraseña
   mostrarSeccionPassword = false;
   passwordActual = '';
   passwordNueva = '';
   passwordConfirmar = '';
 
-  // Horario semanal del empleado
   horarioSemanal: HorarioSemanal | null = null;
   isLoadingHorario = false;
   diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
   diasLabels: { [key: string]: string } = {
-    'lunes': 'Lun', 'martes': 'Mar', 'miercoles': 'Mié',
-    'jueves': 'Jue', 'viernes': 'Vie', 'sabado': 'Sáb', 'domingo': 'Dom'
+    'lunes': 'Lun', 'martes': 'Mar', 'miercoles': 'Mie',
+    'jueves': 'Jue', 'viernes': 'Vie', 'sabado': 'Sab', 'domingo': 'Dom'
   };
 
   ngOnInit() {
     this.currentEmpleado = this.auth.getCurrentEmpleado();
-    
+
     if (!this.currentEmpleado) {
       this.router.navigate(['/login']);
       return;
     }
 
-    // Generar URL de foto de perfil
     this.fotoUrl = this.getFotoUrl(
       this.currentEmpleado.foto,
       this.currentEmpleado.nombre
@@ -87,11 +82,11 @@ export class DashboardComponent implements OnInit {
     if (!fotoPath || fotoPath === 'img/perfil.png') {
       return this.getAvatarPlaceholder(nombre);
     }
-    
+
     if (fotoPath.startsWith('http')) {
       return fotoPath;
     }
-    
+
     const baseUrl = 'http://localhost:8080';
     return `${baseUrl}/${fotoPath}`;
   }
@@ -105,18 +100,16 @@ export class DashboardComponent implements OnInit {
     target.src = this.getAvatarPlaceholder(this.currentEmpleado?.nombre || 'Usuario');
   }
 
-  // Carga asistencia del día actual
   cargarAsistencia() {
     this.isLoading = true;
     this.asistenciaService.getAsistenciasPorEmpleado(this.currentEmpleado.id).subscribe({
       next: (data: any[]) => {
-        // Fecha local YYYY-MM-DD
-        const hoy = new Date().toLocaleDateString('en-CA'); 
+        const hoy = new Date().toLocaleDateString('en-CA');
 
         this.asistenciaHoy = data.find((a: any) => {
           return a.fecha && a.fecha.toString().substring(0, 10) === hoy;
         }) || null;
-        
+
         this.isLoading = false;
       },
       error: () => {
@@ -129,7 +122,6 @@ export class DashboardComponent implements OnInit {
   async marcarAsistencia() {
     if (!this.currentEmpleado) return;
 
-    // Obtener fecha y hora actual formateada
     const ahora = new Date();
     const fechaFormateada = ahora.toLocaleDateString('es-ES', {
       weekday: 'long',
@@ -142,15 +134,12 @@ export class DashboardComponent implements OnInit {
       minute: '2-digit'
     });
 
-    // Determinar tipo de marcaje
     const esMarcajeEntrada = this.tipoMarcaje === 'entrada';
     const tipoTexto = esMarcajeEntrada ? 'ENTRADA' : 'SALIDA';
-    const icono = esMarcajeEntrada ? '🟢' : '🔴';
 
-    // Mostrar confirmación flotante
     const confirmado = await this.notification.confirm({
       title: `Confirmar Marcaje de ${tipoTexto}`,
-      message: `${icono} ¿Desea registrar su ${tipoTexto.toLowerCase()}?\n\n📅 ${fechaFormateada}\n🕐 ${horaFormateada}`,
+      message: `Desea registrar su ${tipoTexto.toLowerCase()}?\n\n${fechaFormateada}\n${horaFormateada}`,
       confirmText: `Marcar ${tipoTexto}`,
       cancelText: 'Cancelar',
       type: esMarcajeEntrada ? 'success' : 'danger'
@@ -172,12 +161,12 @@ export class DashboardComponent implements OnInit {
         if (esMarcajeEntrada) {
           this.notification.success(
             `Entrada registrada a las ${horaCorta}`,
-            '¡Buen día de trabajo!'
+            'Buen dia de trabajo!'
           );
         } else {
           this.notification.success(
             `Salida registrada a las ${horaCorta}`,
-            '¡Hasta pronto!'
+            'Hasta pronto!'
           );
         }
 
@@ -194,12 +183,10 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  // Habilitar entrada si no existe registro
   puedeMarcarEntrada(): boolean {
     return !this.asistenciaHoy;
   }
 
-  // Habilitar salida si hay entrada y no salida
   puedeMarcarSalida(): boolean {
     return this.asistenciaHoy && this.asistenciaHoy.horaEntrada && !this.asistenciaHoy.horaSalida;
   }
@@ -231,7 +218,7 @@ export class DashboardComponent implements OnInit {
   isSupervisor(): boolean {
     return this.auth.isSupervisor();
   }
-  
+
   logout() {
     this.auth.logout();
     this.router.navigate(['/login']);
@@ -249,8 +236,6 @@ export class DashboardComponent implements OnInit {
   getRolDisplayName(): string {
     return this.auth.getRolDisplayName();
   }
-
-  // ========== MODAL DE PERFIL ==========
 
   abrirModalPerfil() {
     this.descripcionEdit = this.currentEmpleado?.descripcion || '';
@@ -280,7 +265,7 @@ export class DashboardComponent implements OnInit {
     if (file) {
       const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
       if (!validTypes.includes(file.type)) {
-        this.mostrarErrorModal('Solo se permiten imágenes (JPEG, PNG, GIF)');
+        this.mostrarErrorModal('Solo se permiten imagenes (JPEG, PNG, GIF)');
         event.target.value = '';
         return;
       }
@@ -320,7 +305,6 @@ export class DashboardComponent implements OnInit {
       hobby: this.hobbyEdit.trim()
     };
 
-    // Usar endpoint de auth que está disponible para todos los usuarios
     this.http.put('http://localhost:8080/api/auth/perfil/actualizar', datos, {
       headers: { 'Authorization': `Bearer ${this.auth.getToken()}` }
     }).subscribe({
@@ -371,17 +355,17 @@ export class DashboardComponent implements OnInit {
     if (!this.currentEmpleado?.username) return;
 
     if (!this.passwordActual || !this.passwordNueva || !this.passwordConfirmar) {
-      this.mostrarErrorModal('Todos los campos de contraseña son requeridos');
+      this.mostrarErrorModal('Todos los campos de contrasena son requeridos');
       return;
     }
 
     if (this.passwordNueva.length < 6) {
-      this.mostrarErrorModal('La nueva contraseña debe tener al menos 6 caracteres');
+      this.mostrarErrorModal('La nueva contrasena debe tener al menos 6 caracteres');
       return;
     }
 
     if (this.passwordNueva !== this.passwordConfirmar) {
-      this.mostrarErrorModal('Las contraseñas no coinciden');
+      this.mostrarErrorModal('Las contrasenas no coinciden');
       return;
     }
 
@@ -394,7 +378,7 @@ export class DashboardComponent implements OnInit {
       this.passwordNueva
     ).subscribe({
       next: () => {
-        this.mostrarMensajeModal('Contraseña cambiada exitosamente');
+        this.mostrarMensajeModal('Contrasena cambiada exitosamente');
         this.passwordActual = '';
         this.passwordNueva = '';
         this.passwordConfirmar = '';
@@ -402,7 +386,7 @@ export class DashboardComponent implements OnInit {
         this.isUpdating = false;
       },
       error: (e) => {
-        this.mostrarErrorModal(e.error?.error || 'Error al cambiar contraseña');
+        this.mostrarErrorModal(e.error?.error || 'Error al cambiar contrasena');
         this.isUpdating = false;
       }
     });
@@ -424,7 +408,7 @@ export class DashboardComponent implements OnInit {
     switch (nivel?.toLowerCase()) {
       case 'jefe': return 'Jefe/Gerente';
       case 'supervisor': return 'Supervisor';
-      case 'tecnico': return 'Técnico';
+      case 'tecnico': return 'Tecnico';
       case 'hd': return 'HD';
       case 'bo': return 'Back Office';
       case 'noc': return 'NOC';
@@ -432,11 +416,8 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  // ========== HORARIO SEMANAL ==========
-
   cargarHorario() {
     if (!this.currentEmpleado?.id) return;
-    // Admin no tiene horarios
     if (this.currentEmpleado.rol === 'admin') return;
 
     this.isLoadingHorario = true;
@@ -476,7 +457,7 @@ export class DashboardComponent implements OnInit {
     switch (rol?.toLowerCase()) {
       case 'admin': return 'Administrador';
       case 'supervisor': return 'Supervisor';
-      case 'tecnico': return 'Técnico';
+      case 'tecnico': return 'Tecnico';
       case 'hd': return 'HD';
       case 'noc': return 'NOC';
       default: return rol || 'Sin rol';

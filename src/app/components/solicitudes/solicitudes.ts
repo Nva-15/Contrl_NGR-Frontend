@@ -28,28 +28,25 @@ export class SolicitudesComponent implements OnInit {
   solicitudesPendientes: SolicitudResponse[] = [];
   historialGlobal: SolicitudResponse[] = [];
   todosEmpleados: any[] = [];
-  
-  // Filtros para MIS SOLICITUDES
+
   filtroEstadoMisSolicitudes = '';
   filtroTipoMisSolicitudes = '';
   filtroFechaInicioMisSolicitudes = '';
   filtroFechaFinMisSolicitudes = '';
-  
-  // Filtros para PENDIENTES (solo jefes/supervisores)
+
   filtroTipoPendientes = '';
   filtroRolPendientes = '';
   filtroEmpleadoPendientes = '';
   filtroFechaInicioPendientes = '';
   filtroFechaFinPendientes = '';
-  
-  // Filtros para HISTORIAL GLOBAL
+
   filtroRolHistorial = '';
   filtroTipoHistorial = '';
   filtroEstadoHistorial = '';
   filtroEmpleadoHistorial = '';
   filtroFechaInicioHistorial = '';
   filtroFechaFinHistorial = '';
-  
+
   nuevaSolicitud = {
     tipo: 'vacaciones',
     fechaInicio: '',
@@ -81,7 +78,7 @@ export class SolicitudesComponent implements OnInit {
 
   ngOnInit() {
     this.currentUser = this.authService.getCurrentEmpleado();
-    
+
     this.route.queryParams.subscribe(params => {
       if (params['tab']) {
         this.activeTab = params['tab'];
@@ -110,47 +107,38 @@ export class SolicitudesComponent implements OnInit {
 
   puedeEditarSolicitud(solicitud: SolicitudResponse): boolean {
     if (!solicitud.estado || !this.currentUser) return false;
-
     const esMiSolicitud = solicitud.empleadoId === this.currentUser.id;
-
-    // Solo el dueño puede editar su solicitud y solo si está pendiente
     return esMiSolicitud && solicitud.estado === 'pendiente';
   }
 
-  // Verificar si el jefe puede corregir el estado de una solicitud ya procesada
   puedeCorregirEstado(solicitud: SolicitudResponse): boolean {
     if (!solicitud.estado || !this.currentUser) return false;
-
-    // Solo para solicitudes aprobadas o rechazadas
     if (!['aprobado', 'rechazado'].includes(solicitud.estado)) return false;
 
-    // No puede corregir su propia solicitud
     const esMiSolicitud = solicitud.empleadoId === this.currentUser.id;
     if (esMiSolicitud) return false;
 
-    // Verificar permisos según rol del empleado de la solicitud
     const rolSolicitud = this.obtenerRolEmpleado(solicitud.empleadoId);
 
     if (['tecnico', 'hd', 'noc'].includes(rolSolicitud)) {
-      return this.esJefe(); // Supervisor o Admin
+      return this.esJefe();
     }
 
     if (rolSolicitud === 'supervisor') {
-      return this.esAdmin(); // Solo Admin
+      return this.esAdmin();
     }
 
     return this.esAdmin();
   }
 
-  // Corregir el estado de una solicitud (en caso de error)
   async corregirEstado(id: number, nuevoEstado: string) {
     const estadoTexto = nuevoEstado === 'aprobado' ? 'APROBADO' : 'RECHAZADO';
     const tipo = nuevoEstado === 'aprobado' ? 'success' : 'danger';
 
     const confirmado = await this.notification.confirm({
       title: 'Corregir estado',
-      message: `¿Confirma que desea cambiar el estado de esta solicitud a ${estadoTexto}?`,
-      confirmText: 'Sí, corregir',
+      message: `Confirma que desea cambiar el estado de esta solicitud a ${estadoTexto}?`,
+      confirmText: 'Si, corregir',
       cancelText: 'Cancelar',
       type: tipo as 'success' | 'danger'
     });
@@ -223,7 +211,7 @@ export class SolicitudesComponent implements OnInit {
     }
 
     if (this.nuevaSolicitud.fechaInicio > this.nuevaSolicitud.fechaFin) {
-      this.notification.warning('La fecha de fin no puede ser anterior a la fecha de inicio', 'Fechas inválidas');
+      this.notification.warning('La fecha de fin no puede ser anterior a la fecha de inicio', 'Fechas invalidas');
       return;
     }
 
@@ -237,7 +225,6 @@ export class SolicitudesComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         if (response.tieneConflictos && response.conflictos && response.conflictos.length > 0) {
-          // Mostrar modal de confirmación con información de conflictos
           this.tieneConflictos = true;
           this.mensajeConflictos = response.mensaje;
           this.conflictosDetectados = response.conflictos;
@@ -245,23 +232,21 @@ export class SolicitudesComponent implements OnInit {
           this.mostrarModalConflictos = true;
           this.isLoading = false;
         } else {
-          // No hay conflictos, proceder directamente
           this.enviarSolicitud();
         }
       },
-      error: (err) => {
-        console.error('Error verificando conflictos:', err);
+      error: () => {
         this.enviarSolicitud();
       }
     });
   }
-  
+
   private enviarSolicitud() {
     const payload = {
       empleadoId: this.currentUser.id,
       ...this.nuevaSolicitud
     };
-  
+
     this.solicitudesService.crearSolicitud(payload).subscribe({
       next: (response) => {
         if (response.tieneNotaConflicto) {
@@ -295,16 +280,16 @@ export class SolicitudesComponent implements OnInit {
       this.notification.error('No tiene permisos para editar esta solicitud', 'Acceso denegado');
       return;
     }
-    
+
     this.modoEdicion = true;
     this.solicitudEditando = solicitud;
-    
+
     const fechaInicioRaw = solicitud.fechaInicio || '';
     const fechaFinRaw = solicitud.fechaFin || '';
-    
+
     const fechaInicio = fechaInicioRaw.split('T')[0];
     const fechaFin = fechaFinRaw.split('T')[0];
-    
+
     this.editandoSolicitud = {
       id: solicitud.id || 0,
       tipo: solicitud.tipo || 'vacaciones',
@@ -313,7 +298,7 @@ export class SolicitudesComponent implements OnInit {
       motivo: solicitud.motivo || '',
       estado: solicitud.estado || 'pendiente'
     };
-    
+
     this.activeTab = 'crear';
   }
 
@@ -324,7 +309,7 @@ export class SolicitudesComponent implements OnInit {
     }
 
     if (this.editandoSolicitud.fechaInicio > this.editandoSolicitud.fechaFin) {
-      this.notification.warning('La fecha de fin no puede ser anterior a la fecha de inicio', 'Fechas inválidas');
+      this.notification.warning('La fecha de fin no puede ser anterior a la fecha de inicio', 'Fechas invalidas');
       return;
     }
 
@@ -338,10 +323,8 @@ export class SolicitudesComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         if (response.tieneConflictos && response.conflictos) {
-          // Filtrar la solicitud actual (no es conflicto consigo misma)
           const conflictosFiltrados = response.conflictos.filter((c: any) => c.id !== this.editandoSolicitud.id);
           if (conflictosFiltrados.length > 0) {
-            // Mostrar modal de confirmación con información de conflictos
             this.tieneConflictos = true;
             this.mensajeConflictos = response.mensaje;
             this.conflictosDetectados = conflictosFiltrados;
@@ -349,11 +332,9 @@ export class SolicitudesComponent implements OnInit {
             this.mostrarModalConflictos = true;
             this.isLoading = false;
           } else {
-            // No hay conflictos reales, proceder
             this.actualizarSolicitud();
           }
         } else {
-          // No hay conflictos, proceder directamente
           this.actualizarSolicitud();
         }
       },
@@ -368,17 +349,16 @@ export class SolicitudesComponent implements OnInit {
       fechaFin: this.editandoSolicitud.fechaFin,
       motivo: this.editandoSolicitud.motivo
     };
-  
-    // Si es jefe y NO es su solicitud, incluir el estado
+
     if (this.esJefe() && this.editandoSolicitud.id) {
       const esMiSolicitud = this.misSolicitudes.some(s => s.id === this.editandoSolicitud.id);
       if (!esMiSolicitud) {
         payload.estado = this.editandoSolicitud.estado;
       }
     }
-  
+
     this.solicitudesService.editarSolicitud(this.editandoSolicitud.id, payload).subscribe({
-      next: (response) => {
+      next: () => {
         this.notification.success('La solicitud ha sido actualizada correctamente.', 'Solicitud actualizada');
         this.cargarDatos();
         this.cancelarEdicion();
@@ -409,7 +389,6 @@ export class SolicitudesComponent implements OnInit {
     this.activeTab = this.esJefe() ? 'aprobar' : 'mis-solicitudes';
   }
 
-  // GETTERS FILTRADOS
   get misSolicitudesFiltradas() {
     return this.misSolicitudes.filter(sol => {
       let matchEstado = true;
@@ -440,7 +419,7 @@ export class SolicitudesComponent implements OnInit {
 
   get pendientesFiltradas() {
     if (!this.esJefe()) return [];
-    
+
     return this.solicitudesPendientes.filter(sol => {
       let matchTipo = true;
       let matchRol = true;
@@ -478,7 +457,7 @@ export class SolicitudesComponent implements OnInit {
 
   get historialGlobalFiltrado() {
     if (!this.esJefe()) return [];
-    
+
     return this.historialGlobal.filter(sol => {
       let matchRol = true;
       let matchTipo = true;
@@ -521,28 +500,28 @@ export class SolicitudesComponent implements OnInit {
 
   get empleadosFiltrados() {
     if (!this.esJefe()) return [];
-    
+
     let empleados = this.todosEmpleados;
-    
+
     if (this.filtroRolPendientes) {
       empleados = empleados.filter(e => e.rol === this.filtroRolPendientes);
     }
-    
+
     return empleados;
   }
 
   validarFechasFiltro() {
-    if (this.filtroFechaInicioMisSolicitudes && this.filtroFechaFinMisSolicitudes && 
+    if (this.filtroFechaInicioMisSolicitudes && this.filtroFechaFinMisSolicitudes &&
         this.filtroFechaFinMisSolicitudes < this.filtroFechaInicioMisSolicitudes) {
       this.filtroFechaFinMisSolicitudes = this.filtroFechaInicioMisSolicitudes;
     }
-    
-    if (this.filtroFechaInicioPendientes && this.filtroFechaFinPendientes && 
+
+    if (this.filtroFechaInicioPendientes && this.filtroFechaFinPendientes &&
         this.filtroFechaFinPendientes < this.filtroFechaInicioPendientes) {
       this.filtroFechaFinPendientes = this.filtroFechaInicioPendientes;
     }
-    
-    if (this.filtroFechaInicioHistorial && this.filtroFechaFinHistorial && 
+
+    if (this.filtroFechaInicioHistorial && this.filtroFechaFinHistorial &&
         this.filtroFechaFinHistorial < this.filtroFechaInicioHistorial) {
       this.filtroFechaFinHistorial = this.filtroFechaInicioHistorial;
     }
@@ -595,7 +574,7 @@ export class SolicitudesComponent implements OnInit {
       this.exportando = false;
       return;
     }
-    
+
     const nombreArchivo = this.getNombreArchivoExportacion();
     this.exportService.exportToExcel(datos, nombreArchivo);
     this.exportando = false;
@@ -610,11 +589,11 @@ export class SolicitudesComponent implements OnInit {
       this.exportando = false;
       return;
     }
-    
+
     const nombreArchivo = this.getNombreArchivoExportacion();
     const titulo = this.getTituloExportacion();
     const columnas = this.getColumnasExportacion();
-    
+
     this.exportService.exportToPDF(datos, columnas, {
       title: titulo,
       filename: nombreArchivo,
@@ -631,10 +610,10 @@ export class SolicitudesComponent implements OnInit {
         { header: 'F. Solicitud', dataKey: 'fechaSolicitud', width: 28 },
         { header: 'Inicio', dataKey: 'fechaInicio', width: 25 },
         { header: 'Fin', dataKey: 'fechaFin', width: 25 },
-        { header: 'Días', dataKey: 'dias', width: 12 },
+        { header: 'Dias', dataKey: 'dias', width: 12 },
         { header: 'Estado', dataKey: 'estado', width: 22 },
-        { header: 'Aprobó', dataKey: 'aprobadoPor', width: 35 },
-        { header: 'F. Aprobación', dataKey: 'fechaAprobacion', width: 28 }
+        { header: 'Aprobo', dataKey: 'aprobadoPor', width: 35 },
+        { header: 'F. Aprobacion', dataKey: 'fechaAprobacion', width: 28 }
       ];
     } else if (this.activeTab === 'aprobar') {
       return [
@@ -644,12 +623,11 @@ export class SolicitudesComponent implements OnInit {
         { header: 'Tipo', dataKey: 'tipo', width: 25 },
         { header: 'Inicio', dataKey: 'fechaInicio', width: 25 },
         { header: 'Fin', dataKey: 'fechaFin', width: 25 },
-        { header: 'Días', dataKey: 'dias', width: 12 },
+        { header: 'Dias', dataKey: 'dias', width: 12 },
         { header: 'F. Solicitud', dataKey: 'fechaSolicitud', width: 28 },
         { header: 'Motivo', dataKey: 'motivo', width: 50 }
       ];
     } else {
-      // Historial - usar headers cortos para que quepan todas las columnas
       return [
         { header: 'ID', dataKey: 'id', width: 8 },
         { header: 'Empleado', dataKey: 'empleadoNombre', width: 35 },
@@ -657,18 +635,18 @@ export class SolicitudesComponent implements OnInit {
         { header: 'Tipo', dataKey: 'tipo', width: 22 },
         { header: 'Inicio', dataKey: 'fechaInicio', width: 22 },
         { header: 'Fin', dataKey: 'fechaFin', width: 22 },
-        { header: 'Días', dataKey: 'dias', width: 10 },
+        { header: 'Dias', dataKey: 'dias', width: 10 },
         { header: 'Estado', dataKey: 'estado', width: 18 },
-        { header: 'Aprobó', dataKey: 'aprobadoPor', width: 30 },
+        { header: 'Aprobo', dataKey: 'aprobadoPor', width: 30 },
         { header: 'F. Solicitud', dataKey: 'fechaSolicitud', width: 25 },
-        { header: 'F. Aprobación', dataKey: 'fechaAprobacion', width: 25 }
+        { header: 'F. Aprobacion', dataKey: 'fechaAprobacion', width: 25 }
       ];
     }
   }
 
   private obtenerDatosParaExportar(): any[] {
     let datosOriginales: SolicitudResponse[] = [];
-    
+
     switch(this.activeTab) {
       case 'mis-solicitudes':
         datosOriginales = this.misSolicitudesFiltradas;
@@ -682,7 +660,7 @@ export class SolicitudesComponent implements OnInit {
       default:
         datosOriginales = [];
     }
-    
+
     return datosOriginales.map(sol => {
       const empleado = this.todosEmpleados.find(e => e.id === sol.empleadoId);
       return {
@@ -711,7 +689,7 @@ export class SolicitudesComponent implements OnInit {
     const roles: { [key: string]: string } = {
       'admin': 'Admin',
       'supervisor': 'Supervisor',
-      'tecnico': 'Técnico',
+      'tecnico': 'Tecnico',
       'hd': 'HD',
       'noc': 'NOC'
     };
@@ -723,7 +701,7 @@ export class SolicitudesComponent implements OnInit {
       'vacaciones': 'Vacaciones',
       'permiso': 'Permiso',
       'descanso': 'Descanso',
-      'compensacion': 'Compensación',
+      'compensacion': 'Compensacion',
       'licencia': 'Licencia'
     };
     return tipos[tipo?.toLowerCase()] || tipo;
@@ -744,7 +722,7 @@ export class SolicitudesComponent implements OnInit {
       'aprobar': 'solicitudes_pendientes',
       'historial': 'historial_solicitudes'
     };
-    
+
     const fecha = new Date().toISOString().split('T')[0];
     return `${tipoMap[this.activeTab] || 'solicitudes'}_${fecha}`;
   }
@@ -752,10 +730,10 @@ export class SolicitudesComponent implements OnInit {
   private getTituloExportacion(): string {
     const tituloMap: {[key: string]: string} = {
       'mis-solicitudes': 'Mis Solicitudes',
-      'aprobar': 'Solicitudes Pendientes de Aprobación',
+      'aprobar': 'Solicitudes Pendientes de Aprobacion',
       'historial': 'Historial de Solicitudes'
     };
-    
+
     return tituloMap[this.activeTab] || 'Reporte de Solicitudes';
   }
 
@@ -784,12 +762,12 @@ export class SolicitudesComponent implements OnInit {
     try {
       const [fechaPart, horaPart] = fechaHora.split('T');
       const [anio, mes, dia] = fechaPart.split('-');
-      
+
       if (horaPart) {
         const [hora, minutos] = horaPart.split(':');
         return `${dia}/${mes}/${anio} ${hora}:${minutos}`;
       }
-      
+
       return `${dia}/${mes}/${anio}`;
     } catch {
       return fechaHora;
@@ -801,7 +779,7 @@ export class SolicitudesComponent implements OnInit {
     try {
       const fechaInicio = inicio.split('T')[0];
       const fechaFin = fin.split('T')[0];
-      
+
       const start = new Date(fechaInicio);
       const end = new Date(fechaFin);
       const diffTime = Math.abs(end.getTime() - start.getTime());
@@ -817,7 +795,7 @@ export class SolicitudesComponent implements OnInit {
 
     const confirmado = await this.notification.confirm({
       title: `${estadoTexto} Solicitud`,
-      message: `¿Confirma que desea ${estadoTexto.toLowerCase()} esta solicitud?`,
+      message: `Confirma que desea ${estadoTexto.toLowerCase()} esta solicitud?`,
       confirmText: estadoTexto,
       cancelText: 'Cancelar',
       type: tipo
@@ -852,7 +830,6 @@ export class SolicitudesComponent implements OnInit {
     this.accionPendiente = null;
   }
 
-  // Confirmar continuar a pesar de los conflictos
   confirmarConflictos() {
     this.mostrarModalConflictos = false;
     this.isLoading = true;
@@ -866,7 +843,6 @@ export class SolicitudesComponent implements OnInit {
     this.accionPendiente = null;
   }
 
-  // Cancelar la acción debido a conflictos
   cancelarConflictos() {
     this.mostrarModalConflictos = false;
     this.tieneConflictos = false;
@@ -878,7 +854,7 @@ export class SolicitudesComponent implements OnInit {
 
   getEstadoClass(estado: string): string {
     if (!estado) return 'bg-secondary';
-    
+
     switch (estado.toLowerCase()) {
       case 'aprobado': return 'bg-success';
       case 'rechazado': return 'bg-danger';
@@ -889,7 +865,7 @@ export class SolicitudesComponent implements OnInit {
 
   getRolClass(rol: string): string {
     if (!rol) return 'bg-secondary';
-    
+
     switch (rol.toLowerCase()) {
       case 'admin': return 'bg-dark text-white';
       case 'supervisor': return 'bg-primary text-white';
@@ -917,7 +893,7 @@ export class SolicitudesComponent implements OnInit {
     if (!this.todosEmpleados || this.todosEmpleados.length === 0) {
       return '';
     }
-    
+
     const empleado = this.todosEmpleados.find(e => e.id === empleadoId);
     return empleado?.rol || '';
   }
