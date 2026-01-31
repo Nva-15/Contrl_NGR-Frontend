@@ -388,12 +388,23 @@
                 </span>
               </td>
               <td class="text-end pe-4">
-                <button class="btn btn-sm btn-outline-primary" 
-                        (click)="cargarSolicitudParaEditar(sol)" 
-                        *ngIf="puedeEditarSolicitud(sol)"
-                        title="Editar solicitud">
-                  <i class="bi bi-pencil"></i>
-                </button>
+                <div class="btn-group btn-group-sm" role="group">
+                  <button class="btn btn-outline-primary"
+                          (click)="cargarSolicitudParaEditar(sol)"
+                          *ngIf="puedeEditarSolicitud(sol)"
+                          title="Editar solicitud">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-outline-danger"
+                          (click)="eliminarSolicitud(sol.id!)"
+                          *ngIf="sol.estado === 'pendiente'"
+                          title="Eliminar solicitud pendiente">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+                <span *ngIf="sol.estado !== 'pendiente'" class="text-muted small fst-italic">
+                  --
+                </span>
               </td>
             </tr>
             <tr *ngIf="misSolicitudesFiltradas.length === 0">

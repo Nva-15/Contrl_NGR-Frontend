@@ -217,26 +217,68 @@ export class SolicitudesComponent implements OnInit {
 
     this.isLoading = true;
 
-    this.solicitudesService.verificarConflictosPorRol(
+    // Primero verificar si el usuario ya tiene una solicitud en ese rango
+    this.solicitudesService.verificarConflictos(
       this.currentUser.id,
-      this.currentUser.rol,
       this.nuevaSolicitud.fechaInicio,
       this.nuevaSolicitud.fechaFin
     ).subscribe({
-      next: (response) => {
-        if (response.tieneConflictos && response.conflictos && response.conflictos.length > 0) {
-          this.tieneConflictos = true;
-          this.mensajeConflictos = response.mensaje;
-          this.conflictosDetectados = response.conflictos;
-          this.accionPendiente = 'crear';
-          this.mostrarModalConflictos = true;
+      next: (responsePropio) => {
+        if (responsePropio.tieneConflictos && responsePropio.conflictos && responsePropio.conflictos.length > 0) {
+          // El usuario ya tiene una solicitud en ese rango
+          this.notification.error('Ya tienes una solicitud en este rango de fechas', 'Conflicto de fechas');
           this.isLoading = false;
-        } else {
-          this.enviarSolicitud();
+          return;
         }
+
+        // Si no hay conflictos propios, verificar conflictos por rol
+        this.solicitudesService.verificarConflictosPorRol(
+          this.currentUser.id,
+          this.currentUser.rol,
+          this.nuevaSolicitud.fechaInicio,
+          this.nuevaSolicitud.fechaFin
+        ).subscribe({
+          next: (response) => {
+            if (response.tieneConflictos && response.conflictos && response.conflictos.length > 0) {
+              this.tieneConflictos = true;
+              this.mensajeConflictos = response.mensaje;
+              this.conflictosDetectados = response.conflictos;
+              this.accionPendiente = 'crear';
+              this.mostrarModalConflictos = true;
+              this.isLoading = false;
+            } else {
+              this.enviarSolicitud();
+            }
+          },
+          error: () => {
+            this.enviarSolicitud();
+          }
+        });
       },
       error: () => {
-        this.enviarSolicitud();
+        // Si hay error en la verificación propia, continuar con la verificación por rol
+        this.solicitudesService.verificarConflictosPorRol(
+          this.currentUser.id,
+          this.currentUser.rol,
+          this.nuevaSolicitud.fechaInicio,
+          this.nuevaSolicitud.fechaFin
+        ).subscribe({
+          next: (response) => {
+            if (response.tieneConflictos && response.conflictos && response.conflictos.length > 0) {
+              this.tieneConflictos = true;
+              this.mensajeConflictos = response.mensaje;
+              this.conflictosDetectados = response.conflictos;
+              this.accionPendiente = 'crear';
+              this.mostrarModalConflictos = true;
+              this.isLoading = false;
+            } else {
+              this.enviarSolicitud();
+            }
+          },
+          error: () => {
+            this.enviarSolicitud();
+          }
+        });
       }
     });
   }
@@ -315,30 +357,77 @@ export class SolicitudesComponent implements OnInit {
 
     this.isLoading = true;
 
-    this.solicitudesService.verificarConflictosPorRol(
+    // Verificar si el usuario ya tiene otra solicitud en ese rango (excluyendo la actual)
+    this.solicitudesService.verificarConflictos(
       this.currentUser.id,
-      this.currentUser.rol,
       this.editandoSolicitud.fechaInicio,
       this.editandoSolicitud.fechaFin
     ).subscribe({
-      next: (response) => {
-        if (response.tieneConflictos && response.conflictos) {
-          const conflictosFiltrados = response.conflictos.filter((c: any) => c.id !== this.editandoSolicitud.id);
-          if (conflictosFiltrados.length > 0) {
-            this.tieneConflictos = true;
-            this.mensajeConflictos = response.mensaje;
-            this.conflictosDetectados = conflictosFiltrados;
-            this.accionPendiente = 'editar';
-            this.mostrarModalConflictos = true;
+      next: (responsePropio) => {
+        if (responsePropio.tieneConflictos && responsePropio.conflictos) {
+          const conflictosPropio = responsePropio.conflictos.filter((c: any) => c.id !== this.editandoSolicitud.id);
+          if (conflictosPropio.length > 0) {
+            this.notification.error('Ya tienes otra solicitud en este rango de fechas', 'Conflicto de fechas');
             this.isLoading = false;
-          } else {
-            this.actualizarSolicitud();
+            return;
           }
-        } else {
-          this.actualizarSolicitud();
         }
+
+        // Si no hay conflictos propios, verificar conflictos por rol
+        this.solicitudesService.verificarConflictosPorRol(
+          this.currentUser.id,
+          this.currentUser.rol,
+          this.editandoSolicitud.fechaInicio,
+          this.editandoSolicitud.fechaFin
+        ).subscribe({
+          next: (response) => {
+            if (response.tieneConflictos && response.conflictos) {
+              const conflictosFiltrados = response.conflictos.filter((c: any) => c.id !== this.editandoSolicitud.id);
+              if (conflictosFiltrados.length > 0) {
+                this.tieneConflictos = true;
+                this.mensajeConflictos = response.mensaje;
+                this.conflictosDetectados = conflictosFiltrados;
+                this.accionPendiente = 'editar';
+                this.mostrarModalConflictos = true;
+                this.isLoading = false;
+              } else {
+                this.actualizarSolicitud();
+              }
+            } else {
+              this.actualizarSolicitud();
+            }
+          },
+          error: () => this.actualizarSolicitud()
+        });
       },
-      error: () => this.actualizarSolicitud()
+      error: () => {
+        // Si hay error en la verificación propia, continuar con verificación por rol
+        this.solicitudesService.verificarConflictosPorRol(
+          this.currentUser.id,
+          this.currentUser.rol,
+          this.editandoSolicitud.fechaInicio,
+          this.editandoSolicitud.fechaFin
+        ).subscribe({
+          next: (response) => {
+            if (response.tieneConflictos && response.conflictos) {
+              const conflictosFiltrados = response.conflictos.filter((c: any) => c.id !== this.editandoSolicitud.id);
+              if (conflictosFiltrados.length > 0) {
+                this.tieneConflictos = true;
+                this.mensajeConflictos = response.mensaje;
+                this.conflictosDetectados = conflictosFiltrados;
+                this.accionPendiente = 'editar';
+                this.mostrarModalConflictos = true;
+                this.isLoading = false;
+              } else {
+                this.actualizarSolicitud();
+              }
+            } else {
+              this.actualizarSolicitud();
+            }
+          },
+          error: () => this.actualizarSolicitud()
+        });
+      }
     });
   }
 
@@ -813,6 +902,31 @@ export class SolicitudesComponent implements OnInit {
         }
       },
       error: () => this.notification.error('Error al procesar la solicitud', 'Error')
+    });
+  }
+
+  async eliminarSolicitud(id: number) {
+    const confirmado = await this.notification.confirm({
+      title: 'Eliminar Solicitud',
+      message: '¿Está seguro de que desea eliminar esta solicitud pendiente? Esta acción no se puede deshacer.',
+      confirmText: 'Sí, eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+
+    if (!confirmado) return;
+
+    this.isLoading = true;
+    this.solicitudesService.eliminarSolicitud(id).subscribe({
+      next: () => {
+        this.notification.success('La solicitud ha sido eliminada correctamente.', 'Solicitud eliminada');
+        this.cargarDatos();
+        this.isLoading = false;
+      },
+      error: (err) => {
+        this.notification.error(err || 'Error al eliminar la solicitud', 'Error');
+        this.isLoading = false;
+      }
     });
   }
 

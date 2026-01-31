@@ -112,4 +112,19 @@ export class SolicitudesService {
     }
     return this.http.get(`${this.apiUrl}/exportar/${tipo}`, { params });
   }
+
+  eliminarSolicitud(id: number): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.delete<any>(`${this.apiUrl}/eliminar/${id}`, { headers }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 403) {
+          return throwError(() => error.error?.error || 'No tiene permisos para eliminar esta solicitud');
+        }
+        if (error.status === 401) {
+          return throwError(() => 'No autorizado. Por favor inicie sesión nuevamente');
+        }
+        return throwError(() => error.error?.error || 'Error al eliminar solicitud');
+      })
+    );
+  }
 }
