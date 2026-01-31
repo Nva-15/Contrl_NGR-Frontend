@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EmpleadosService } from '../../services/empleados';
 import { EmpleadoResponse } from '../../interfaces/empleado';
+import { ApiConfigService } from '../../services/api-config.service';
 
 @Component({
   selector: 'app-organigrama',
@@ -12,6 +13,7 @@ import { EmpleadoResponse } from '../../interfaces/empleado';
 })
 export class OrganigramaComponent implements OnInit {
   private empService = inject(EmpleadosService);
+  private apiConfig = inject(ApiConfigService);
 
   nivelJefes: EmpleadoResponse[] = [];
   nivelSupervisores: EmpleadoResponse[] = [];
@@ -27,7 +29,9 @@ export class OrganigramaComponent implements OnInit {
 
   isLoading = true;
   isLoadingDetalle = false;
-  private apiUrl = 'http://localhost:8080';
+  private get apiUrl() {
+    return this.apiConfig.baseUrl;
+  }
 
   ngOnInit() {
     this.cargarDatos();

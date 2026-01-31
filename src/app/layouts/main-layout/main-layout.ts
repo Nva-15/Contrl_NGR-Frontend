@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth';
+import { ApiConfigService } from '../../services/api-config.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -13,6 +14,7 @@ import { AuthService } from '../../services/auth';
 export class MainLayoutComponent implements OnInit {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private apiConfig = inject(ApiConfigService);
 
   currentEmpleado: any;
   fotoUrl: string = '';
@@ -37,13 +39,12 @@ export class MainLayoutComponent implements OnInit {
     if (!fotoPath || fotoPath === 'img/perfil.png') {
       return this.getAvatarPlaceholder(nombre);
     }
-    
+
     if (fotoPath.startsWith('http')) {
       return fotoPath;
     }
-    
-    const baseUrl = 'http://localhost:8080';
-    return `${baseUrl}/${fotoPath}`;
+
+    return `${this.apiConfig.baseUrl}/${fotoPath}`;
   }
 
   private getAvatarPlaceholder(nombre: string): string {

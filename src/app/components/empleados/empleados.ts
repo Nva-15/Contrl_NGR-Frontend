@@ -8,6 +8,7 @@ import { AuthService } from '../../services/auth';
 import { ExportService } from '../../services/export';
 import { EmpleadoResponse } from '../../interfaces/empleado';
 import { NotificationService } from '../../services/notification.service';
+import { ApiConfigService } from '../../services/api-config.service';
 
 @Component({
   selector: 'app-empleados',
@@ -27,6 +28,7 @@ export class EmpleadosComponent implements OnInit {
   router = inject(Router);
   cdr = inject(ChangeDetectorRef);
   notification = inject(NotificationService);
+  apiConfig = inject(ApiConfigService);
 
   empForm: FormGroup;
 
@@ -260,7 +262,7 @@ export class EmpleadosComponent implements OnInit {
     const formData = new FormData();
     formData.append('archivo', file);
 
-    this.http.post(`http://localhost:8080/api/imagenes/upload/${empleadoId}`, formData, {
+    this.http.post(`${this.apiConfig.apiUrl}/imagenes/upload/${empleadoId}`, formData, {
       headers: {
         'Authorization': `Bearer ${this.authService.getToken()}`
       }
@@ -962,8 +964,7 @@ export class EmpleadosComponent implements OnInit {
       return fotoPath;
     }
 
-    const baseUrl = 'http://localhost:8080';
-    return `${baseUrl}/${fotoPath}`;
+    return `${this.apiConfig.baseUrl}/${fotoPath}`;
   }
 
   handleImageError(event: any, nombre: string): void {
