@@ -198,13 +198,23 @@
                 </div>
               </a>
 
-              <a *ngIf="isAdmin() || isSupervisor()" 
-                 routerLink="/empleados" 
+              <a *ngIf="isAdmin() || isSupervisor()"
+                 routerLink="/empleados"
                  class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center bg-danger bg-opacity-10">
                 <i class="bi bi-people text-danger fs-4 me-3"></i>
                 <div class="lh-1">
                   <h6 class="mb-0 text-danger">Empleados</h6>
-                  <small class="text-danger-50" style="font-size:0.75rem">Gestión Admin</small>
+                  <small class="text-danger-50" style="font-size:0.75rem">Gestion Admin</small>
+                </div>
+              </a>
+
+              <a *ngIf="isAdmin() || isSupervisor()"
+                 routerLink="/eventos"
+                 class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center bg-primary bg-opacity-10">
+                <i class="bi bi-calendar-event text-primary fs-4 me-3"></i>
+                <div class="lh-1">
+                  <h6 class="mb-0 text-primary">Eventos</h6>
+                  <small class="text-primary-50" style="font-size:0.75rem">Gestion Admin</small>
                 </div>
               </a>
 
@@ -250,25 +260,48 @@
 
       <div class="col-md-6">
         <div class="card shadow-sm h-100">
-          <div class="card-header bg-light">
-            <h6 class="mb-0"><i class="bi bi-bell me-2"></i>Próximos Eventos</h6>
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-bell me-2"></i>Eventos Activos</h6>
+            <span class="badge bg-primary" *ngIf="eventosActivos.length > 0">{{ eventosActivos.length }}</span>
           </div>
           <div class="card-body p-0">
-            <div class="list-group list-group-flush">
-              <div class="list-group-item px-3 py-3">
+            <!-- Loading -->
+            <div *ngIf="isLoadingEventos" class="text-center py-4">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              <small class="text-muted ms-2">Cargando eventos...</small>
+            </div>
+
+            <!-- Sin eventos -->
+            <div *ngIf="!isLoadingEventos && eventosActivos.length === 0" class="text-center py-4">
+              <i class="bi bi-calendar-x text-muted" style="font-size: 2rem;"></i>
+              <p class="text-muted mt-2 mb-0">No hay eventos activos</p>
+            </div>
+
+            <!-- Lista de eventos -->
+            <div class="list-group list-group-flush" *ngIf="!isLoadingEventos && eventosActivos.length > 0">
+              <a *ngFor="let evento of eventosActivos.slice(0, 4)"
+                 href="javascript:void(0)"
+                 (click)="abrirEvento(evento)"
+                 class="list-group-item list-group-item-action px-3 py-3">
                 <div class="d-flex w-100 justify-content-between align-items-center mb-1">
-                  <h6 class="mb-0 fw-bold text-primary">Reunión de Equipo</h6>
-                  <span class="badge bg-primary bg-opacity-10 text-primary">Hoy, 10:00 AM</span>
+                  <div class="d-flex align-items-center">
+                    <i class="bi {{ getTipoEventoIcon(evento.tipoEvento) }} text-{{ getTipoEventoColor(evento.tipoEvento) }} me-2"></i>
+                    <h6 class="mb-0 fw-bold">{{ evento.titulo }}</h6>
+                  </div>
+                  <div>
+                    <span *ngIf="evento.yaRespondio" class="badge bg-success me-1" title="Ya respondiste">
+                      <i class="bi bi-check-lg"></i>
+                    </span>
+                    <span class="badge bg-{{ getTipoEventoColor(evento.tipoEvento) }} bg-opacity-10 text-{{ getTipoEventoColor(evento.tipoEvento) }}">
+                      {{ getTipoEventoLabel(evento.tipoEvento) }}
+                    </span>
+                  </div>
                 </div>
-                <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>Sala de Conferencias Principal</small>
-              </div>
-              <div class="list-group-item px-3 py-3">
-                <div class="d-flex w-100 justify-content-between align-items-center mb-1">
-                  <h6 class="mb-0 fw-bold text-dark">Entrega de Reportes</h6>
-                  <span class="badge bg-secondary bg-opacity-10 text-dark">Viernes</span>
-                </div>
-                <small class="text-muted"><i class="bi bi-file-text me-1"></i>Reporte mensual de actividades</small>
-              </div>
+                <small class="text-muted d-block text-truncate">{{ evento.descripcion }}</small>
+                <small class="text-muted" *ngIf="evento.fechaFin">
+                  <i class="bi bi-clock me-1"></i>Hasta: {{ getFechaEventoFormateada(evento.fechaFin) }}
+                </small>
+              </a>
             </div>
           </div>
         </div>
@@ -565,7 +598,136 @@
       </div>
     </div>
   </div>
-  <!-- Backdrop del Modal -->
+  <!-- Backdrop del Modal Perfil -->
   <div class="modal-backdrop fade show" *ngIf="mostrarModalPerfil"></div>
+
+  <!-- Modal de Evento -->
+  <div class="modal fade show"
+       [class.d-block]="mostrarModalEvento"
+       [style.display]="mostrarModalEvento ? 'block' : 'none'"
+       tabindex="-1"
+       *ngIf="mostrarModalEvento && eventoSeleccionado">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+
+        <!-- Header -->
+        <div class="modal-header bg-{{ getTipoEventoColor(eventoSeleccionado.tipoEvento) }} text-white">
+          <h5 class="modal-title">
+            <i class="bi {{ getTipoEventoIcon(eventoSeleccionado.tipoEvento) }} me-2"></i>
+            {{ eventoSeleccionado.titulo }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="cerrarModalEvento()" [disabled]="respuestaEnviando"></button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+          <!-- Descripcion -->
+          <div class="mb-3">
+            <p class="mb-2">{{ eventoSeleccionado.descripcion }}</p>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge bg-light text-dark">
+                <i class="bi bi-tag me-1"></i>{{ getTipoEventoLabel(eventoSeleccionado.tipoEvento) }}
+              </span>
+              <span class="badge bg-light text-dark" *ngIf="eventoSeleccionado.fechaFin">
+                <i class="bi bi-clock me-1"></i>Hasta: {{ getFechaEventoFormateada(eventoSeleccionado.fechaFin) }}
+              </span>
+              <span class="badge bg-success" *ngIf="eventoSeleccionado.yaRespondio">
+                <i class="bi bi-check-lg me-1"></i>Ya respondiste
+              </span>
+            </div>
+          </div>
+
+          <!-- Respuestas segun tipo -->
+          <div *ngIf="!eventoSeleccionado.yaRespondio">
+
+            <!-- SI/NO -->
+            <div *ngIf="eventoSeleccionado.tipoEvento === 'SI_NO'" class="d-grid gap-2">
+              <h6 class="text-center mb-3">Tu respuesta:</h6>
+              <div class="row g-2">
+                <div class="col-6">
+                  <button class="btn btn-success w-100 py-3"
+                          (click)="responderSiNo(eventoSeleccionado, true)"
+                          [disabled]="respuestaEnviando">
+                    <span *ngIf="respuestaEnviando" class="spinner-border spinner-border-sm me-1"></span>
+                    <i class="bi bi-hand-thumbs-up me-2" *ngIf="!respuestaEnviando"></i>SI
+                  </button>
+                </div>
+                <div class="col-6">
+                  <button class="btn btn-danger w-100 py-3"
+                          (click)="responderSiNo(eventoSeleccionado, false)"
+                          [disabled]="respuestaEnviando">
+                    <span *ngIf="respuestaEnviando" class="spinner-border spinner-border-sm me-1"></span>
+                    <i class="bi bi-hand-thumbs-down me-2" *ngIf="!respuestaEnviando"></i>NO
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ASISTENCIA -->
+            <div *ngIf="eventoSeleccionado.tipoEvento === 'ASISTENCIA'" class="d-grid gap-2">
+              <h6 class="text-center mb-3">Confirma tu asistencia:</h6>
+              <button class="btn btn-success py-2"
+                      (click)="responderAsistencia(eventoSeleccionado, 'CONFIRMADO')"
+                      [disabled]="respuestaEnviando">
+                <span *ngIf="respuestaEnviando" class="spinner-border spinner-border-sm me-1"></span>
+                <i class="bi bi-check-circle me-2" *ngIf="!respuestaEnviando"></i>Confirmar Asistencia
+              </button>
+              <button class="btn btn-outline-danger py-2"
+                      (click)="responderAsistencia(eventoSeleccionado, 'NO_ASISTIRE')"
+                      [disabled]="respuestaEnviando">
+                <i class="bi bi-x-circle me-2"></i>No Asistire
+              </button>
+              <button class="btn btn-outline-secondary py-2"
+                      (click)="responderAsistencia(eventoSeleccionado, 'PENDIENTE')"
+                      [disabled]="respuestaEnviando">
+                <i class="bi bi-question-circle me-2"></i>Aun no lo se
+              </button>
+            </div>
+
+            <!-- ENCUESTA -->
+            <div *ngIf="eventoSeleccionado.tipoEvento === 'ENCUESTA'" class="d-grid gap-2">
+              <h6 class="text-center mb-3">Selecciona una opcion:</h6>
+              <button *ngFor="let opcion of eventoSeleccionado.opciones"
+                      class="btn btn-outline-primary py-2 text-start"
+                      (click)="responderEncuesta(eventoSeleccionado, opcion.id!)"
+                      [disabled]="respuestaEnviando">
+                <span *ngIf="respuestaEnviando" class="spinner-border spinner-border-sm me-1"></span>
+                <i class="bi bi-circle me-2" *ngIf="!respuestaEnviando"></i>
+                {{ opcion.textoOpcion }}
+              </button>
+            </div>
+
+            <!-- INFORMATIVO -->
+            <div *ngIf="eventoSeleccionado.tipoEvento === 'INFORMATIVO'" class="text-center">
+              <i class="bi bi-info-circle text-info" style="font-size: 3rem;"></i>
+              <p class="mt-2 text-muted">Este es un evento informativo.</p>
+            </div>
+
+          </div>
+
+          <!-- Ya respondio -->
+          <div *ngIf="eventoSeleccionado.yaRespondio" class="text-center py-3">
+            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+            <p class="mt-2 mb-0">Ya has registrado tu respuesta a este evento.</p>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button type="button"
+                  class="btn btn-secondary"
+                  (click)="eventoSeleccionado.tipoEvento === 'INFORMATIVO' && !eventoSeleccionado.yaRespondio ? marcarEventoVisto(eventoSeleccionado) : cerrarModalEvento()"
+                  [disabled]="respuestaEnviando">
+            <i class="bi bi-x-circle me-1"></i>
+            {{ eventoSeleccionado.tipoEvento === 'INFORMATIVO' && !eventoSeleccionado.yaRespondio ? 'Entendido' : 'Cerrar' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <!-- Backdrop del Modal Evento -->
+  <div class="modal-backdrop fade show" *ngIf="mostrarModalEvento"></div>
 
 </div>

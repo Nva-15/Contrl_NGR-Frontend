@@ -1,0 +1,397 @@
+<div class="container-fluid py-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <button class="btn btn-outline-secondary me-2" (click)="volver()">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <h4 class="d-inline-block mb-0">
+        <i class="bi bi-calendar-event me-2"></i>Gestion de Eventos
+      </h4>
+    </div>
+    <button class="btn btn-primary" (click)="abrirModalCrear()">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo Evento
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card mb-4">
+    <div class="card-body py-2">
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-sm"
+                [class.btn-primary]="filtroEstado === 'todos'"
+                [class.btn-outline-secondary]="filtroEstado !== 'todos'"
+                (click)="filtroEstado = 'todos'">
+          Todos ({{ eventos.length }})
+        </button>
+        <button class="btn btn-sm"
+                [class.btn-success]="filtroEstado === 'ACTIVO'"
+                [class.btn-outline-success]="filtroEstado !== 'ACTIVO'"
+                (click)="filtroEstado = 'ACTIVO'">
+          Activos
+        </button>
+        <button class="btn btn-sm"
+                [class.btn-secondary]="filtroEstado === 'BORRADOR'"
+                [class.btn-outline-secondary]="filtroEstado !== 'BORRADOR'"
+                (click)="filtroEstado = 'BORRADOR'">
+          Borradores
+        </button>
+        <button class="btn btn-sm"
+                [class.btn-primary]="filtroEstado === 'FINALIZADO'"
+                [class.btn-outline-primary]="filtroEstado !== 'FINALIZADO'"
+                (click)="filtroEstado = 'FINALIZADO'">
+          Finalizados
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-muted mt-2">Cargando eventos...</p>
+  </div>
+
+  <!-- Sin eventos -->
+  <div *ngIf="!isLoading && eventosFiltrados.length === 0" class="text-center py-5">
+    <i class="bi bi-calendar-x text-muted" style="font-size: 4rem;"></i>
+    <h5 class="text-muted mt-3">No hay eventos</h5>
+    <p class="text-muted">Crea un nuevo evento para comenzar</p>
+  </div>
+
+  <!-- Lista de eventos -->
+  <div class="row g-3" *ngIf="!isLoading && eventosFiltrados.length > 0">
+    <div class="col-md-6 col-lg-4" *ngFor="let evento of eventosFiltrados">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center py-2"
+             [class.bg-success]="evento.estado === 'ACTIVO'"
+             [class.bg-secondary]="evento.estado === 'BORRADOR'"
+             [class.bg-primary]="evento.estado === 'FINALIZADO'"
+             [class.bg-danger]="evento.estado === 'CANCELADO'"
+             [class.text-white]="true">
+          <span>
+            <i class="bi {{ getTipoEventoIcon(evento.tipoEvento) }} me-1"></i>
+            {{ getTipoEventoLabel(evento.tipoEvento) }}
+          </span>
+          <span class="badge bg-light text-dark">{{ getEstadoLabel(evento.estado) }}</span>
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">{{ evento.titulo }}</h5>
+          <p class="card-text text-muted small text-truncate">{{ evento.descripcion }}</p>
+
+          <div class="d-flex gap-2 flex-wrap mb-2">
+            <span class="badge bg-light text-dark" *ngIf="evento.totalRespuestas !== undefined">
+              <i class="bi bi-chat-dots me-1"></i>{{ evento.totalRespuestas }} respuestas
+            </span>
+            <span class="badge bg-light text-dark" *ngIf="evento.fechaFin">
+              <i class="bi bi-clock me-1"></i>{{ getFechaFormateada(evento.fechaFin) }}
+            </span>
+          </div>
+
+          <small class="text-muted d-block mb-2">
+            Visible para: {{ evento.rolesVisibles?.join(', ') || 'Todos' }}
+          </small>
+        </div>
+        <div class="card-footer bg-light">
+          <div class="btn-group btn-group-sm w-100">
+            <button class="btn btn-outline-info" (click)="verEstadisticas(evento)" title="Ver estadisticas">
+              <i class="bi bi-bar-chart"></i>
+            </button>
+            <button class="btn btn-outline-primary" (click)="abrirModalEditar(evento)" title="Editar"
+                    *ngIf="evento.estado === 'BORRADOR'">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-outline-success" (click)="cambiarEstado(evento, 'ACTIVO')" title="Activar"
+                    *ngIf="evento.estado === 'BORRADOR'">
+              <i class="bi bi-play-fill"></i>
+            </button>
+            <button class="btn btn-outline-warning" (click)="cambiarEstado(evento, 'FINALIZADO')" title="Finalizar"
+                    *ngIf="evento.estado === 'ACTIVO'">
+              <i class="bi bi-stop-fill"></i>
+            </button>
+            <button class="btn btn-outline-secondary" (click)="cambiarEstado(evento, 'BORRADOR')" title="Volver a borrador"
+                    *ngIf="evento.estado === 'ACTIVO'">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button class="btn btn-outline-danger" (click)="eliminarEvento(evento)" title="Eliminar"
+                    *ngIf="evento.estado !== 'ACTIVO'">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Crear/Editar Evento -->
+<div class="modal fade show"
+     [class.d-block]="mostrarModalEvento"
+     [style.display]="mostrarModalEvento ? 'block' : 'none'"
+     tabindex="-1"
+     *ngIf="mostrarModalEvento">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-calendar-plus me-2"></i>
+          {{ eventoEditId ? 'Editar Evento' : 'Nuevo Evento' }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModalEvento()" [disabled]="isGuardando"></button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Titulo -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Titulo *</label>
+          <input type="text" class="form-control" [(ngModel)]="eventoEdit.titulo"
+                 placeholder="Titulo del evento" maxlength="200">
+        </div>
+
+        <!-- Descripcion -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Descripcion *</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="eventoEdit.descripcion"
+                    placeholder="Descripcion detallada del evento"></textarea>
+        </div>
+
+        <!-- Tipo de evento -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Tipo de Evento *</label>
+          <div class="d-flex gap-2 flex-wrap">
+            <button *ngFor="let tipo of tiposEvento"
+                    class="btn"
+                    [class.btn-primary]="eventoEdit.tipoEvento === tipo.value"
+                    [class.btn-outline-secondary]="eventoEdit.tipoEvento !== tipo.value"
+                    (click)="eventoEdit.tipoEvento = tipo.value">
+              <i class="bi {{ getTipoEventoIcon(tipo.value) }} me-1"></i>{{ tipo.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Opciones para encuesta -->
+        <div class="mb-3" *ngIf="eventoEdit.tipoEvento === 'ENCUESTA'">
+          <label class="form-label fw-bold">Opciones de la encuesta *</label>
+          <div class="input-group mb-2">
+            <input type="text" class="form-control" [(ngModel)]="opcionNueva"
+                   placeholder="Nueva opcion" (keyup.enter)="agregarOpcion()">
+            <button class="btn btn-outline-primary" (click)="agregarOpcion()">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </div>
+          <div class="list-group">
+            <div class="list-group-item d-flex justify-content-between align-items-center"
+                 *ngFor="let opcion of eventoEdit.opciones; let i = index">
+              <span><i class="bi bi-circle me-2"></i>{{ opcion }}</span>
+              <button class="btn btn-sm btn-outline-danger" (click)="eliminarOpcion(i)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+          <small class="text-muted" *ngIf="!eventoEdit.opciones || eventoEdit.opciones.length < 2">
+            Se requieren al menos 2 opciones
+          </small>
+        </div>
+
+        <!-- Fechas -->
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Fecha Inicio</label>
+            <input type="datetime-local" class="form-control" [(ngModel)]="eventoEdit.fechaInicio">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Fecha Fin</label>
+            <input type="datetime-local" class="form-control" [(ngModel)]="eventoEdit.fechaFin">
+          </div>
+        </div>
+
+        <!-- Roles visibles -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Visible para roles *</label>
+          <div class="d-flex gap-2 flex-wrap">
+            <button *ngFor="let rol of rolesDisponibles"
+                    class="btn btn-sm"
+                    [class.btn-success]="isRolSeleccionado(rol.value)"
+                    [class.btn-outline-secondary]="!isRolSeleccionado(rol.value)"
+                    (click)="toggleRol(rol.value)">
+              <i class="bi" [class.bi-check]="isRolSeleccionado(rol.value)" [class.bi-circle]="!isRolSeleccionado(rol.value)"></i>
+              {{ rol.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Opciones adicionales -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="permiteComentarios"
+                     [(ngModel)]="eventoEdit.permiteComentarios">
+              <label class="form-check-label" for="permiteComentarios">Permite comentarios</label>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="requiereRespuesta"
+                     [(ngModel)]="eventoEdit.requiereRespuesta">
+              <label class="form-check-label" for="requiereRespuesta">Requiere respuesta</label>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalEvento()" [disabled]="isGuardando">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="guardarEvento()" [disabled]="isGuardando">
+          <span *ngIf="isGuardando" class="spinner-border spinner-border-sm me-1"></span>
+          {{ eventoEditId ? 'Actualizar' : 'Crear' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="mostrarModalEvento"></div>
+
+<!-- Modal Estadisticas -->
+<div class="modal fade show"
+     [class.d-block]="mostrarModalStats"
+     [style.display]="mostrarModalStats ? 'block' : 'none'"
+     tabindex="-1"
+     *ngIf="mostrarModalStats">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-bar-chart me-2"></i>
+          Estadisticas: {{ eventoStats?.titulo }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModalStats()"></button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Loading -->
+        <div *ngIf="isLoadingStats" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="text-muted mt-2">Cargando estadisticas...</p>
+        </div>
+
+        <div *ngIf="!isLoadingStats && estadisticas">
+          <!-- Resumen general -->
+          <div class="row text-center mb-4">
+            <div class="col-4">
+              <div class="border rounded p-3">
+                <h3 class="text-primary mb-0">{{ estadisticas.totalRespuestas }}</h3>
+                <small class="text-muted">Respuestas</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="border rounded p-3">
+                <h3 class="text-info mb-0">{{ estadisticas.totalEmpleados }}</h3>
+                <small class="text-muted">Total empleados</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="border rounded p-3">
+                <h3 class="text-success mb-0">{{ estadisticas.porcentajeParticipacion | number:'1.1-1' }}%</h3>
+                <small class="text-muted">Participacion</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- SI/NO -->
+          <div *ngIf="estadisticas.tipoEvento === 'SI_NO'" class="mb-4">
+            <h6 class="mb-3">Resultados:</h6>
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="bg-success bg-opacity-10 border border-success rounded p-3 text-center">
+                  <h2 class="text-success mb-0">{{ estadisticas.respuestasSi || 0 }}</h2>
+                  <span>SI</span>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="bg-danger bg-opacity-10 border border-danger rounded p-3 text-center">
+                  <h2 class="text-danger mb-0">{{ estadisticas.respuestasNo || 0 }}</h2>
+                  <span>NO</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ASISTENCIA -->
+          <div *ngIf="estadisticas.tipoEvento === 'ASISTENCIA'" class="mb-4">
+            <h6 class="mb-3">Confirmaciones:</h6>
+            <div class="row g-3">
+              <div class="col-4">
+                <div class="bg-success bg-opacity-10 border border-success rounded p-3 text-center">
+                  <h2 class="text-success mb-0">{{ estadisticas.confirmados || 0 }}</h2>
+                  <small>Confirmados</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="bg-danger bg-opacity-10 border border-danger rounded p-3 text-center">
+                  <h2 class="text-danger mb-0">{{ estadisticas.noAsistiran || 0 }}</h2>
+                  <small>No asistiran</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="bg-warning bg-opacity-10 border border-warning rounded p-3 text-center">
+                  <h2 class="text-warning mb-0">{{ estadisticas.pendientes || 0 }}</h2>
+                  <small>Pendientes</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ENCUESTA -->
+          <div *ngIf="estadisticas.tipoEvento === 'ENCUESTA' && estadisticas.opcionesEstadisticas" class="mb-4">
+            <h6 class="mb-3">Resultados por opcion:</h6>
+            <div *ngFor="let opcion of estadisticas.opcionesEstadisticas" class="mb-2">
+              <div class="d-flex justify-content-between mb-1">
+                <span>{{ opcion.textoOpcion }}</span>
+                <span class="fw-bold">{{ opcion.votos }} votos ({{ opcion.porcentaje | number:'1.1-1' }}%)</span>
+              </div>
+              <div class="progress" style="height: 20px;">
+                <div class="progress-bar bg-primary" [style.width.%]="opcion.porcentaje"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lista de respuestas -->
+          <div class="mt-4" *ngIf="respuestasEvento.length > 0">
+            <h6 class="mb-3">Detalle de respuestas:</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-striped">
+                <thead>
+                  <tr>
+                    <th>Empleado</th>
+                    <th>Respuesta</th>
+                    <th>Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let r of respuestasEvento">
+                    <td>{{ r.empleadoNombre }}</td>
+                    <td>
+                      <span *ngIf="r.respuestaSiNo !== undefined && r.respuestaSiNo !== null">
+                        {{ r.respuestaSiNo ? 'SI' : 'NO' }}
+                      </span>
+                      <span *ngIf="r.confirmacionAsistencia">{{ r.confirmacionAsistencia }}</span>
+                      <span *ngIf="r.opcionTexto">{{ r.opcionTexto }}</span>
+                    </td>
+                    <td>{{ getFechaFormateada(r.fechaRespuesta) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalStats()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="mostrarModalStats"></div>

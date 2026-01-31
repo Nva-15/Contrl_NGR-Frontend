@@ -9,7 +9,9 @@ import { EmpleadosService } from '../../services/empleados';
 import { HorariosService } from '../../services/horarios';
 import { NotificationService } from '../../services/notification.service';
 import { ApiConfigService } from '../../services/api-config.service';
+import { EventosService } from '../../services/eventos';
 import { HorarioSemanal, HorarioDia } from '../../interfaces/horario';
+import { Evento, RespuestaEventoRequest } from '../../interfaces/evento';
 
 @Component({
   selector: 'app-dashboard',
@@ -29,6 +31,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private horariosService = inject(HorariosService);
   private notification = inject(NotificationService);
   private apiConfig = inject(ApiConfigService);
+  private eventosService = inject(EventosService);
   private http = inject(HttpClient);
   private router = inject(Router);
 
@@ -65,6 +68,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     'jueves': 'Jue', 'viernes': 'Vie', 'sabado': 'Sab', 'domingo': 'Dom'
   };
 
+  // Eventos
+  eventosActivos: Evento[] = [];
+  isLoadingEventos = false;
+  eventoSeleccionado: Evento | null = null;
+  mostrarModalEvento = false;
+  respuestaEnviando = false;
+
   ngOnInit() {
     this.currentEmpleado = this.auth.getCurrentEmpleado();
 
@@ -80,6 +90,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.cargarAsistencia();
     this.cargarHorario();
+    this.cargarEventos();
 
     // Actualizar la hora cada segundo
     this.intervaloReloj = setInterval(() => {
@@ -516,5 +527,191 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const segundos = fecha.getSeconds().toString().padStart(2, '0');
 
     return `${diaSemana}, ${diaMes} de ${mes} de ${año} - ${horas}:${minutos}:${segundos}`;
+  }
+
+  // ==================== EVENTOS ====================
+
+  cargarEventos() {
+    this.isLoadingEventos = true;
+    this.eventosService.getEventosActivos().subscribe({
+      next: (eventos) => {
+        this.eventosActivos = eventos;
+        this.isLoadingEventos = false;
+      },
+      error: () => {
+        this.isLoadingEventos = false;
+        this.eventosActivos = [];
+      }
+    });
+  }
+
+  abrirEvento(evento: Evento) {
+    this.eventoSeleccionado = evento;
+    this.mostrarModalEvento = true;
+  }
+
+  cerrarModalEvento() {
+    this.mostrarModalEvento = false;
+    this.eventoSeleccionado = null;
+  }
+
+  getTipoEventoIcon(tipo: string): string {
+    return this.eventosService.getTipoEventoIcon(tipo);
+  }
+
+  getTipoEventoColor(tipo: string): string {
+    return this.eventosService.getTipoEventoColor(tipo);
+  }
+
+  getTipoEventoLabel(tipo: string): string {
+    return this.eventosService.getTipoEventoLabel(tipo);
+  }
+
+  getFechaEventoFormateada(fecha: string | undefined): string {
+    if (!fecha) return 'Sin fecha';
+    try {
+      const date = new Date(fecha);
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return fecha;
+    }
+  }
+
+  async responderSiNo(evento: Evento, respuesta: boolean) {
+    if (this.respuestaEnviando) return;
+
+    const confirmado = await this.notification.confirm({
+      title: respuesta ? 'Confirmar SI' : 'Confirmar NO',
+      message: `Desea responder "${respuesta ? 'SI' : 'NO'}" a "${evento.titulo}"?`,
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      type: respuesta ? 'success' : 'danger'
+    });
+
+    if (!confirmado) return;
+
+    this.respuestaEnviando = true;
+    const request: RespuestaEventoRequest = {
+      eventoId: evento.id!,
+      respuestaSiNo: respuesta
+    };
+
+    this.eventosService.responderEvento(request).subscribe({
+      next: () => {
+        this.notification.success(
+          `Has respondido "${respuesta ? 'SI' : 'NO'}"`,
+          'Respuesta registrada'
+        );
+        this.cargarEventos();
+        this.cerrarModalEvento();
+        this.respuestaEnviando = false;
+      },
+      error: (err) => {
+        this.notification.error(err, 'Error');
+        this.respuestaEnviando = false;
+      }
+    });
+  }
+
+  async responderAsistencia(evento: Evento, confirmacion: string) {
+    if (this.respuestaEnviando) return;
+
+    const labels: { [key: string]: string } = {
+      'CONFIRMADO': 'Confirmar asistencia',
+      'NO_ASISTIRE': 'No asistire',
+      'PENDIENTE': 'Marcar como pendiente'
+    };
+
+    const confirmado = await this.notification.confirm({
+      title: labels[confirmacion] || confirmacion,
+      message: `Desea marcar su asistencia como "${labels[confirmacion]}" para "${evento.titulo}"?`,
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      type: confirmacion === 'CONFIRMADO' ? 'success' : 'warning'
+    });
+
+    if (!confirmado) return;
+
+    this.respuestaEnviando = true;
+    const request: RespuestaEventoRequest = {
+      eventoId: evento.id!,
+      confirmacionAsistencia: confirmacion
+    };
+
+    this.eventosService.responderEvento(request).subscribe({
+      next: () => {
+        this.notification.success(
+          `Asistencia marcada como "${labels[confirmacion]}"`,
+          'Respuesta registrada'
+        );
+        this.cargarEventos();
+        this.cerrarModalEvento();
+        this.respuestaEnviando = false;
+      },
+      error: (err) => {
+        this.notification.error(err, 'Error');
+        this.respuestaEnviando = false;
+      }
+    });
+  }
+
+  async responderEncuesta(evento: Evento, opcionId: number) {
+    if (this.respuestaEnviando) return;
+
+    const opcion = evento.opciones?.find(o => o.id === opcionId);
+
+    const confirmado = await this.notification.confirm({
+      title: 'Confirmar voto',
+      message: `Desea votar por "${opcion?.textoOpcion}" en "${evento.titulo}"?`,
+      confirmText: 'Votar',
+      cancelText: 'Cancelar',
+      type: 'success'
+    });
+
+    if (!confirmado) return;
+
+    this.respuestaEnviando = true;
+    const request: RespuestaEventoRequest = {
+      eventoId: evento.id!,
+      opcionId: opcionId
+    };
+
+    this.eventosService.responderEvento(request).subscribe({
+      next: () => {
+        this.notification.success(
+          `Has votado por "${opcion?.textoOpcion}"`,
+          'Voto registrado'
+        );
+        this.cargarEventos();
+        this.cerrarModalEvento();
+        this.respuestaEnviando = false;
+      },
+      error: (err) => {
+        this.notification.error(err, 'Error');
+        this.respuestaEnviando = false;
+      }
+    });
+  }
+
+  marcarEventoVisto(evento: Evento) {
+    if (evento.tipoEvento === 'INFORMATIVO' && !evento.yaRespondio) {
+      const request: RespuestaEventoRequest = {
+        eventoId: evento.id!,
+        comentario: 'Visto'
+      };
+      this.eventosService.responderEvento(request).subscribe({
+        next: () => {
+          this.cargarEventos();
+          this.cerrarModalEvento();
+        }
+      });
+    } else {
+      this.cerrarModalEvento();
+    }
   }
 }
