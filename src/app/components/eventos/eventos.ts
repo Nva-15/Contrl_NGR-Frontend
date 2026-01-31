@@ -5,7 +5,8 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { EventosService } from '../../services/eventos';
 import { NotificationService } from '../../services/notification.service';
-import { Evento, EventoRequest } from '../../interfaces/evento';
+import { ApiConfigService } from '../../services/api-config.service';
+import { Evento, EventoRequest, RespuestaEventoRequest } from '../../interfaces/evento';
 
 @Component({
   selector: 'app-eventos',
@@ -18,11 +19,15 @@ export class EventosComponent implements OnInit {
   private auth = inject(AuthService);
   private eventosService = inject(EventosService);
   private notification = inject(NotificationService);
+  private apiConfig = inject(ApiConfigService);
   private router = inject(Router);
 
   eventos: Evento[] = [];
   isLoading = false;
   filtroEstado = 'todos';
+
+  // Para empleados
+  filtroMisEventos: 'pendientes' | 'respondidos' = 'pendientes';
 
   // Modal crear/editar
   mostrarModalEvento = false;
@@ -30,6 +35,14 @@ export class EventosComponent implements OnInit {
   eventoEditId: number | null = null;
   isGuardando = false;
   opcionNueva = '';
+
+  // Modal responder (para empleados)
+  mostrarModalResponder = false;
+  eventoResponder: Evento | null = null;
+  respuestaEnviando = false;
+
+  // Fecha minima para validacion
+  fechaMinima: string = '';
 
   rolesDisponibles = [
     { value: 'admin', label: 'Administrador' },
@@ -47,27 +60,50 @@ export class EventosComponent implements OnInit {
   ];
 
   ngOnInit() {
-    if (!this.auth.isAdmin() && !this.auth.isSupervisor()) {
-      this.router.navigate(['/dashboard']);
-      return;
-    }
+    this.actualizarFechaMinima();
     this.cargarEventos();
+  }
+
+  actualizarFechaMinima() {
+    const ahora = new Date();
+    this.fechaMinima = ahora.toISOString().slice(0, 16);
+  }
+
+  esAdmin(): boolean {
+    return this.auth.isAdmin() || this.auth.isSupervisor();
   }
 
   cargarEventos() {
     this.isLoading = true;
-    this.eventosService.getTodosEventos().subscribe({
-      next: (eventos) => {
-        this.eventos = eventos;
-        this.isLoading = false;
-      },
-      error: (err) => {
-        this.notification.error(err, 'Error al cargar eventos');
-        this.isLoading = false;
-      }
-    });
+
+    if (this.esAdmin()) {
+      // Admin/Supervisor: cargar todos los eventos
+      this.eventosService.getTodosEventos().subscribe({
+        next: (eventos) => {
+          this.eventos = eventos;
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.notification.error(err, 'Error al cargar eventos');
+          this.isLoading = false;
+        }
+      });
+    } else {
+      // Empleados: cargar solo eventos activos
+      this.eventosService.getEventosActivos().subscribe({
+        next: (eventos) => {
+          this.eventos = eventos;
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.notification.error(err, 'Error al cargar eventos');
+          this.isLoading = false;
+        }
+      });
+    }
   }
 
+  // Filtrado para admin
   get eventosFiltrados(): Evento[] {
     if (this.filtroEstado === 'todos') {
       return this.eventos;
@@ -75,12 +111,30 @@ export class EventosComponent implements OnInit {
     return this.eventos.filter(e => e.estado === this.filtroEstado);
   }
 
+  // Filtrado para empleados
+  get misEventosFiltrados(): Evento[] {
+    if (this.filtroMisEventos === 'pendientes') {
+      return this.eventos.filter(e => !e.yaRespondio);
+    }
+    return this.eventos.filter(e => e.yaRespondio);
+  }
+
+  // Contadores para empleados
+  get eventosPendientesCount(): number {
+    return this.eventos.filter(e => !e.yaRespondio).length;
+  }
+
+  get eventosRespondidosCount(): number {
+    return this.eventos.filter(e => e.yaRespondio).length;
+  }
+
   nuevoEvento(): EventoRequest {
+    this.actualizarFechaMinima();
     return {
       titulo: '',
       descripcion: '',
       tipoEvento: 'INFORMATIVO',
-      fechaInicio: '',
+      fechaInicio: this.fechaMinima,
       fechaFin: '',
       rolesVisibles: ['admin', 'supervisor', 'tecnico', 'hd', 'noc'],
       permiteComentarios: true,
@@ -90,12 +144,14 @@ export class EventosComponent implements OnInit {
   }
 
   abrirModalCrear() {
+    this.actualizarFechaMinima();
     this.eventoEdit = this.nuevoEvento();
     this.eventoEditId = null;
     this.mostrarModalEvento = true;
   }
 
   abrirModalEditar(evento: Evento) {
+    this.actualizarFechaMinima();
     this.eventoEdit = {
       titulo: evento.titulo,
       descripcion: evento.descripcion,
@@ -145,6 +201,30 @@ export class EventosComponent implements OnInit {
     this.eventoEdit.opciones?.splice(index, 1);
   }
 
+  // Validacion de fechas
+  validarFechas(): boolean {
+    const ahora = new Date();
+
+    if (this.eventoEdit.fechaInicio) {
+      const fechaInicio = new Date(this.eventoEdit.fechaInicio);
+      if (fechaInicio < ahora) {
+        this.notification.error('La fecha de inicio no puede ser anterior a la fecha actual', 'Validacion');
+        return false;
+      }
+    }
+
+    if (this.eventoEdit.fechaInicio && this.eventoEdit.fechaFin) {
+      const fechaInicio = new Date(this.eventoEdit.fechaInicio);
+      const fechaFin = new Date(this.eventoEdit.fechaFin);
+      if (fechaFin < fechaInicio) {
+        this.notification.error('La fecha de fin no puede ser anterior a la fecha de inicio', 'Validacion');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   async guardarEvento() {
     if (!this.eventoEdit.titulo.trim()) {
       this.notification.error('El titulo es requerido', 'Validacion');
@@ -154,12 +234,21 @@ export class EventosComponent implements OnInit {
       this.notification.error('La descripcion es requerida', 'Validacion');
       return;
     }
+    if (!this.eventoEdit.fechaInicio) {
+      this.notification.error('La fecha de inicio es requerida', 'Validacion');
+      return;
+    }
     if (this.eventoEdit.rolesVisibles.length === 0) {
       this.notification.error('Debe seleccionar al menos un rol', 'Validacion');
       return;
     }
     if (this.eventoEdit.tipoEvento === 'ENCUESTA' && (!this.eventoEdit.opciones || this.eventoEdit.opciones.length < 2)) {
       this.notification.error('Las encuestas requieren al menos 2 opciones', 'Validacion');
+      return;
+    }
+
+    // Validar fechas solo para eventos nuevos
+    if (!this.eventoEditId && !this.validarFechas()) {
       return;
     }
 
@@ -238,9 +327,148 @@ export class EventosComponent implements OnInit {
   }
 
   verEstadisticas(evento: Evento) {
-    // Navegar a la pagina de estadisticas
     this.router.navigate(['/eventos', evento.id, 'estadisticas']);
   }
+
+  // ==================== RESPUESTAS (para empleados) ====================
+
+  abrirModalResponder(evento: Evento) {
+    this.eventoResponder = evento;
+    this.mostrarModalResponder = true;
+  }
+
+  cerrarModalResponder() {
+    this.mostrarModalResponder = false;
+    this.eventoResponder = null;
+  }
+
+  async responderSiNo(respuesta: boolean) {
+    if (!this.eventoResponder || this.respuestaEnviando) return;
+
+    const confirmado = await this.notification.confirm({
+      title: respuesta ? 'Confirmar SI' : 'Confirmar NO',
+      message: `Desea responder "${respuesta ? 'SI' : 'NO'}"?`,
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      type: respuesta ? 'success' : 'danger'
+    });
+
+    if (!confirmado) return;
+
+    this.respuestaEnviando = true;
+    const request: RespuestaEventoRequest = {
+      eventoId: this.eventoResponder.id!,
+      respuestaSiNo: respuesta
+    };
+
+    this.eventosService.responderEvento(request).subscribe({
+      next: () => {
+        this.notification.success(`Has respondido "${respuesta ? 'SI' : 'NO'}"`, 'Respuesta registrada');
+        this.cargarEventos();
+        this.cerrarModalResponder();
+        this.respuestaEnviando = false;
+      },
+      error: (err) => {
+        this.notification.error(err, 'Error');
+        this.respuestaEnviando = false;
+      }
+    });
+  }
+
+  async responderAsistencia(confirmacion: string) {
+    if (!this.eventoResponder || this.respuestaEnviando) return;
+
+    const labels: { [key: string]: string } = {
+      'CONFIRMADO': 'Confirmar asistencia',
+      'NO_ASISTIRE': 'No asistire',
+      'PENDIENTE': 'Marcar como pendiente'
+    };
+
+    const confirmado = await this.notification.confirm({
+      title: labels[confirmacion] || confirmacion,
+      message: `Desea marcar su asistencia como "${labels[confirmacion]}"?`,
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      type: confirmacion === 'CONFIRMADO' ? 'success' : 'warning'
+    });
+
+    if (!confirmado) return;
+
+    this.respuestaEnviando = true;
+    const request: RespuestaEventoRequest = {
+      eventoId: this.eventoResponder.id!,
+      confirmacionAsistencia: confirmacion
+    };
+
+    this.eventosService.responderEvento(request).subscribe({
+      next: () => {
+        this.notification.success(`Asistencia marcada como "${labels[confirmacion]}"`, 'Respuesta registrada');
+        this.cargarEventos();
+        this.cerrarModalResponder();
+        this.respuestaEnviando = false;
+      },
+      error: (err) => {
+        this.notification.error(err, 'Error');
+        this.respuestaEnviando = false;
+      }
+    });
+  }
+
+  async responderEncuesta(opcionId: number) {
+    if (!this.eventoResponder || this.respuestaEnviando) return;
+
+    const opcion = this.eventoResponder.opciones?.find(o => o.id === opcionId);
+
+    const confirmado = await this.notification.confirm({
+      title: 'Confirmar voto',
+      message: `Desea votar por "${opcion?.textoOpcion}"?`,
+      confirmText: 'Votar',
+      cancelText: 'Cancelar',
+      type: 'success'
+    });
+
+    if (!confirmado) return;
+
+    this.respuestaEnviando = true;
+    const request: RespuestaEventoRequest = {
+      eventoId: this.eventoResponder.id!,
+      opcionId: opcionId
+    };
+
+    this.eventosService.responderEvento(request).subscribe({
+      next: () => {
+        this.notification.success(`Has votado por "${opcion?.textoOpcion}"`, 'Voto registrado');
+        this.cargarEventos();
+        this.cerrarModalResponder();
+        this.respuestaEnviando = false;
+      },
+      error: (err) => {
+        this.notification.error(err, 'Error');
+        this.respuestaEnviando = false;
+      }
+    });
+  }
+
+  marcarEventoVisto() {
+    if (!this.eventoResponder) return;
+
+    if (this.eventoResponder.tipoEvento === 'INFORMATIVO' && !this.eventoResponder.yaRespondio) {
+      const request: RespuestaEventoRequest = {
+        eventoId: this.eventoResponder.id!,
+        comentario: 'Visto'
+      };
+      this.eventosService.responderEvento(request).subscribe({
+        next: () => {
+          this.cargarEventos();
+          this.cerrarModalResponder();
+        }
+      });
+    } else {
+      this.cerrarModalResponder();
+    }
+  }
+
+  // ==================== UTILIDADES ====================
 
   getTipoEventoIcon(tipo: string): string {
     return this.eventosService.getTipoEventoIcon(tipo);
@@ -281,6 +509,12 @@ export class EventosComponent implements OnInit {
     } catch {
       return fecha;
     }
+  }
+
+  getFotoUrl(foto: string | undefined): string {
+    if (!foto) return 'https://ui-avatars.com/api/?name=U&background=6c757d&color=fff';
+    if (foto.startsWith('http')) return foto;
+    return `${this.apiConfig.baseUrl}/${foto}`;
   }
 
   volver() {

@@ -47,7 +47,13 @@
               <i class="bi bi-diagram-3 me-2"></i> Organigrama
             </a>
           </li>
-          
+
+          <li class="nav-item">
+            <a class="nav-link text-white" routerLink="/eventos" routerLinkActive="active">
+              <i class="bi bi-calendar-event me-2"></i> Eventos
+            </a>
+          </li>
+
           <ng-container *ngIf="isAdmin() || isSupervisor()">
             <li class="nav-item mt-4 mb-2 ps-3">
               <span class="text-warning small fw-bold text-uppercase ls-1">Administración</span>
@@ -62,12 +68,6 @@
             <li class="nav-item">
               <a class="nav-link text-white" routerLink="/reportes" routerLinkActive="active">
                 <i class="bi bi-file-earmark-bar-graph me-2"></i> Reportes
-              </a>
-            </li>
-
-            <li class="nav-item">
-              <a class="nav-link text-white" routerLink="/eventos" routerLinkActive="active">
-                <i class="bi bi-calendar-event me-2"></i> Eventos
               </a>
             </li>
           </ng-container>
