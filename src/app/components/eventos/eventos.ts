@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { EventosService } from '../../services/eventos';
 import { NotificationService } from '../../services/notification.service';
-import { Evento, EventoRequest, EstadisticasEvento, RespuestaEvento } from '../../interfaces/evento';
+import { Evento, EventoRequest } from '../../interfaces/evento';
 
 @Component({
   selector: 'app-eventos',
@@ -30,13 +30,6 @@ export class EventosComponent implements OnInit {
   eventoEditId: number | null = null;
   isGuardando = false;
   opcionNueva = '';
-
-  // Modal estadisticas
-  mostrarModalStats = false;
-  estadisticas: EstadisticasEvento | null = null;
-  respuestasEvento: RespuestaEvento[] = [];
-  isLoadingStats = false;
-  eventoStats: Evento | null = null;
 
   rolesDisponibles = [
     { value: 'admin', label: 'Administrador' },
@@ -245,35 +238,8 @@ export class EventosComponent implements OnInit {
   }
 
   verEstadisticas(evento: Evento) {
-    this.eventoStats = evento;
-    this.isLoadingStats = true;
-    this.mostrarModalStats = true;
-
-    this.eventosService.getEstadisticas(evento.id!).subscribe({
-      next: (stats) => {
-        this.estadisticas = stats;
-        this.eventosService.getRespuestasEvento(evento.id!).subscribe({
-          next: (respuestas) => {
-            this.respuestasEvento = respuestas;
-            this.isLoadingStats = false;
-          },
-          error: () => {
-            this.isLoadingStats = false;
-          }
-        });
-      },
-      error: (err) => {
-        this.notification.error(err, 'Error');
-        this.isLoadingStats = false;
-      }
-    });
-  }
-
-  cerrarModalStats() {
-    this.mostrarModalStats = false;
-    this.estadisticas = null;
-    this.respuestasEvento = [];
-    this.eventoStats = null;
+    // Navegar a la pagina de estadisticas
+    this.router.navigate(['/eventos', evento.id, 'estadisticas']);
   }
 
   getTipoEventoIcon(tipo: string): string {

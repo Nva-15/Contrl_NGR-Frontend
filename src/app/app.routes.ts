@@ -9,6 +9,7 @@ import { OrganigramaComponent } from './components/organigrama/organigrama';
 import { HorariosComponent } from './components/horarios/horarios';
 import { ReportesComponent } from './components/reportes/reportes';
 import { EventosComponent } from './components/eventos/eventos';
+import { EventoEstadisticasComponent } from './components/evento-estadisticas/evento-estadisticas';
 
 export const routes: Routes = [
   { 
@@ -60,6 +61,11 @@ export const routes: Routes = [
         path: 'eventos',
         component: EventosComponent,
         title: 'Gestion de Eventos'
+      },
+      {
+        path: 'eventos/:id/estadisticas',
+        component: EventoEstadisticasComponent,
+        title: 'Estadisticas del Evento'
       },
     ]
   },
