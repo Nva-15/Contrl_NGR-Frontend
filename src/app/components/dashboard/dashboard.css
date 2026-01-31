@@ -1,7 +1,23 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background-color: #f8f9fa;
+}
+
+/* Asegurar que el contenido principal ocupe todo el espacio disponible */
+.container-fluid {
+  flex: 1 0 auto;
+}
+
+/* Footer fijo al final */
+footer {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Contenedor principal */
@@ -26,6 +42,15 @@
 /* Navbar personalizado con colores del logo */
 .navbar-ngr {
   background: linear-gradient(135deg, #3D3532 0%, #2A2421 100%);
+}
+
+/* Ajuste para evitar que el navbar fixed tape el contenido */
+body, :host {
+  padding-top: 80px;
+}
+
+.container-fluid > .container {
+  padding-top: 1rem;
 }
 
 .navbar-ngr .dropdown-toggle:hover {

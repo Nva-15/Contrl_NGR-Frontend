@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -17,8 +17,10 @@ import { HorarioSemanal, HorarioDia } from '../../interfaces/horario';
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   @ViewChild('fileInputModal') fileInputModal!: ElementRef;
+
+  private intervaloReloj: any;
 
   private auth = inject(AuthService);
   private asistenciaService = inject(AsistenciaService);
@@ -76,6 +78,18 @@ export class DashboardComponent implements OnInit {
 
     this.cargarAsistencia();
     this.cargarHorario();
+
+    // Actualizar la hora cada segundo
+    this.intervaloReloj = setInterval(() => {
+      this.fechaActual = new Date();
+    }, 1000);
+  }
+
+  ngOnDestroy() {
+    // Limpiar el intervalo cuando el componente se destruya
+    if (this.intervaloReloj) {
+      clearInterval(this.intervaloReloj);
+    }
   }
 
   private getFotoUrl(fotoPath: string | undefined, nombre: string): string {
@@ -482,5 +496,24 @@ export class DashboardComponent implements OnInit {
       case 'noc': return 'NOC';
       default: return rol || 'Sin rol';
     }
+  }
+
+  getFechaEnEspanol(): string {
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    const fecha = this.fechaActual;
+    const diaSemana = dias[fecha.getDay()];
+    const diaMes = fecha.getDate();
+    const mes = meses[fecha.getMonth()];
+    const año = fecha.getFullYear();
+
+    // Obtener la hora actual
+    const horas = fecha.getHours().toString().padStart(2, '0');
+    const minutos = fecha.getMinutes().toString().padStart(2, '0');
+    const segundos = fecha.getSeconds().toString().padStart(2, '0');
+
+    return `${diaSemana}, ${diaMes} de ${mes} de ${año} - ${horas}:${minutos}:${segundos}`;
   }
 }
