@@ -10,14 +10,20 @@ import {
   HorarioSemanalResponse,
   DetalleHorarioDia
 } from '../interfaces/horario';
+import { ApiConfigService } from './api-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class HorariosService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/horarios';
-  private apiUrlSemanal = 'http://localhost:8080/api/horarios-semanales';
+  private apiConfig = inject(ApiConfigService);
+  private get apiUrl() {
+    return `${this.apiConfig.apiUrl}/horarios`;
+  }
+  private get apiUrlSemanal() {
+    return `${this.apiConfig.apiUrl}/horarios-semanales`;
+  }
 
   getHorarios(): Observable<HorarioResponse[]> {
     return this.http.get<HorarioResponse[]>(this.apiUrl).pipe(

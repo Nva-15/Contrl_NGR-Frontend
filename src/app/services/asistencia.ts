@@ -1,15 +1,18 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AsistenciaRequest, AsistenciaResponse, ReporteAsistencia } from '../interfaces/asistencia';
+import { ApiConfigService } from './api-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AsistenciaService {
-  private apiUrl = 'http://localhost:8080/api/asistencia';
-
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private apiConfig = inject(ApiConfigService);
+  private get apiUrl() {
+    return `${this.apiConfig.apiUrl}/asistencia`;
+  }
 
   registrarAsistencia(request: AsistenciaRequest): Observable<AsistenciaResponse> {
     return this.http.post<AsistenciaResponse>(`${this.apiUrl}/registrar`, request);

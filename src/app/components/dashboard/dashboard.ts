@@ -8,6 +8,7 @@ import { AsistenciaService } from '../../services/asistencia';
 import { EmpleadosService } from '../../services/empleados';
 import { HorariosService } from '../../services/horarios';
 import { NotificationService } from '../../services/notification.service';
+import { ApiConfigService } from '../../services/api-config.service';
 import { HorarioSemanal, HorarioDia } from '../../interfaces/horario';
 
 @Component({
@@ -27,6 +28,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private empleadosService = inject(EmpleadosService);
   private horariosService = inject(HorariosService);
   private notification = inject(NotificationService);
+  private apiConfig = inject(ApiConfigService);
   private http = inject(HttpClient);
   private router = inject(Router);
 
@@ -101,8 +103,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return fotoPath;
     }
 
-    const baseUrl = 'http://localhost:8080';
-    return `${baseUrl}/${fotoPath}`;
+    return `${this.apiConfig.baseUrl}/${fotoPath}`;
   }
 
   private getAvatarPlaceholder(nombre: string): string {
@@ -329,7 +330,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       hobby: this.hobbyEdit.trim()
     };
 
-    this.http.put('http://localhost:8080/api/auth/perfil/actualizar', datos, {
+    this.http.put(`${this.apiConfig.apiUrl}/auth/perfil/actualizar`, datos, {
       headers: { 'Authorization': `Bearer ${this.auth.getToken()}` }
     }).subscribe({
       next: () => {
@@ -355,7 +356,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const formData = new FormData();
     formData.append('archivo', this.fotoFileModal);
 
-    this.http.post(`http://localhost:8080/api/imagenes/upload/${this.currentEmpleado.id}`, formData, {
+    this.http.post(`${this.apiConfig.apiUrl}/imagenes/upload/${this.currentEmpleado.id}`, formData, {
       headers: { 'Authorization': `Bearer ${this.auth.getToken()}` }
     }).subscribe({
       next: (response: any) => {

@@ -3,13 +3,17 @@ import { HttpClient, HttpParams, HttpErrorResponse, HttpHeaders } from '@angular
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { SolicitudResponse } from '../interfaces/solicitud';
+import { ApiConfigService } from './api-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SolicitudesService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/solicitudes';
+  private apiConfig = inject(ApiConfigService);
+  private get apiUrl() {
+    return `${this.apiConfig.apiUrl}/solicitudes`;
+  }
 
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('token') || '';

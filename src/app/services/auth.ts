@@ -1,15 +1,20 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { LoginRequest, AuthResponse, TokenVerifyResponse } from '../interfaces/auth';
+import { ApiConfigService } from './api-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private http = inject(HttpClient);
+  private apiConfig = inject(ApiConfigService);
+  private get apiUrl() {
+    return `${this.apiConfig.apiUrl}/auth`;
+  }
 
-  constructor(private http: HttpClient) {
+  constructor() {
     this.initializeAuthState();
   }
 
