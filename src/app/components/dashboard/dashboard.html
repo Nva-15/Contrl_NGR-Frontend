@@ -208,14 +208,26 @@
                 </div>
               </a>
 
-              <a *ngIf="isAdmin() || isSupervisor()"
-                 routerLink="/eventos"
-                 class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center bg-primary bg-opacity-10">
-                <i class="bi bi-calendar-event text-primary fs-4 me-3"></i>
-                <div class="lh-1">
-                  <h6 class="mb-0 text-primary">Eventos</h6>
-                  <small class="text-primary-50" style="font-size:0.75rem">Gestion Admin</small>
+              <a routerLink="/eventos"
+                 class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center"
+                 [class.bg-primary]="eventosActivos.length > 0"
+                 [class.bg-opacity-10]="eventosActivos.length > 0">
+                <i class="bi bi-calendar-event fs-4 me-3"
+                   [class.text-primary]="isAdmin() || isSupervisor()"
+                   [class.text-warning]="!(isAdmin() || isSupervisor()) && eventosActivos.length > 0"
+                   [class.text-secondary]="!(isAdmin() || isSupervisor()) && eventosActivos.length === 0"></i>
+                <div class="lh-1 flex-grow-1">
+                  <h6 class="mb-0" [class.text-primary]="isAdmin() || isSupervisor()">
+                    {{ isAdmin() || isSupervisor() ? 'Eventos' : 'Mis Eventos' }}
+                  </h6>
+                  <small class="text-muted" style="font-size:0.75rem">
+                    {{ isAdmin() || isSupervisor() ? 'Gestion Admin' : 'Pendientes/Respondidos' }}
+                  </small>
                 </div>
+                <span *ngIf="eventosActivos.length > 0 && !(isAdmin() || isSupervisor())"
+                      class="badge bg-warning text-dark">
+                  {{ eventosActivos.length }}
+                </span>
               </a>
 
             </div>
