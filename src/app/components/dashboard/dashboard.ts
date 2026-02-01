@@ -535,7 +535,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isLoadingEventos = true;
     this.eventosService.getEventosActivos().subscribe({
       next: (eventos) => {
-        this.eventosActivos = eventos;
+        // Solo mostrar eventos que NO han sido respondidos
+        this.eventosActivos = eventos.filter(e => !e.yaRespondio);
         this.isLoadingEventos = false;
       },
       error: () => {
