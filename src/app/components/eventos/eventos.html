@@ -6,17 +6,17 @@
         <i class="bi bi-arrow-left"></i>
       </button>
       <h4 class="d-inline-block mb-0">
-        <i class="bi bi-calendar-event me-2"></i>
-        {{ esAdmin() ? 'Gestion de Eventos' : 'Mis Eventos' }}
+        <i class="bi" [class.bi-calendar-event]="esVistaGestion()" [class.bi-calendar-check]="!esVistaGestion()" class="me-2"></i>
+        {{ esVistaGestion() ? 'Gestión de Eventos' : 'Mis Eventos' }}
       </h4>
     </div>
-    <button class="btn btn-primary" (click)="abrirModalCrear()" *ngIf="esAdmin()">
+    <button class="btn btn-primary" (click)="abrirModalCrear()" *ngIf="esVistaGestion()">
       <i class="bi bi-plus-lg me-1"></i>Nuevo Evento
     </button>
   </div>
 
-  <!-- ==================== VISTA ADMIN/SUPERVISOR ==================== -->
-  <ng-container *ngIf="esAdmin()">
+  <!-- ==================== VISTA GESTIÓN (Admin/Supervisor) ==================== -->
+  <ng-container *ngIf="esVistaGestion()">
     <!-- Filtros para admin -->
     <div class="card mb-4">
       <div class="card-body py-2">
@@ -127,26 +127,38 @@
     </div>
   </ng-container>
 
-  <!-- ==================== VISTA EMPLEADO ==================== -->
-  <ng-container *ngIf="!esAdmin()">
-    <!-- Filtros para empleados -->
+  <!-- ==================== VISTA MIS EVENTOS (Todos los usuarios) ==================== -->
+  <ng-container *ngIf="!esVistaGestion()">
+    <!-- Filtros para usuarios -->
     <div class="card mb-4">
       <div class="card-body py-2">
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-sm"
-                  [class.btn-warning]="filtroMisEventos === 'pendientes'"
-                  [class.btn-outline-warning]="filtroMisEventos !== 'pendientes'"
-                  (click)="filtroMisEventos = 'pendientes'">
-            <i class="bi bi-exclamation-circle me-1"></i>
-            Pendientes ({{ eventosPendientesCount }})
-          </button>
-          <button class="btn btn-sm"
-                  [class.btn-success]="filtroMisEventos === 'respondidos'"
-                  [class.btn-outline-success]="filtroMisEventos !== 'respondidos'"
-                  (click)="filtroMisEventos = 'respondidos'">
-            <i class="bi bi-check-circle me-1"></i>
-            Respondidos ({{ eventosRespondidosCount }})
-          </button>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <!-- Filtro por estado -->
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm"
+                    [class.btn-warning]="filtroMisEventos === 'pendientes'"
+                    [class.btn-outline-warning]="filtroMisEventos !== 'pendientes'"
+                    (click)="filtroMisEventos = 'pendientes'">
+              <i class="bi bi-exclamation-circle me-1"></i>
+              Pendientes ({{ eventosPendientesCount }})
+            </button>
+            <button class="btn btn-sm"
+                    [class.btn-success]="filtroMisEventos === 'respondidos'"
+                    [class.btn-outline-success]="filtroMisEventos !== 'respondidos'"
+                    (click)="filtroMisEventos = 'respondidos'">
+              <i class="bi bi-check-circle me-1"></i>
+              Respondidos ({{ eventosRespondidosCount }})
+            </button>
+          </div>
+          <!-- Filtro por fecha -->
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-calendar3 text-muted"></i>
+            <select class="form-select form-select-sm" [(ngModel)]="filtroDias" style="width: auto;">
+              <option *ngFor="let opcion of opcionesDias" [value]="opcion.value">
+                {{ opcion.label }}
+              </option>
+            </select>
+          </div>
         </div>
       </div>
     </div>

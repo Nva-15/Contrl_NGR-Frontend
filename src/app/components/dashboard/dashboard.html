@@ -210,24 +210,29 @@
 
               <a routerLink="/eventos"
                  class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center"
-                 [class.bg-primary]="eventosActivos.length > 0"
+                 [class.bg-warning]="eventosActivos.length > 0"
                  [class.bg-opacity-10]="eventosActivos.length > 0">
-                <i class="bi bi-calendar-event fs-4 me-3"
-                   [class.text-primary]="isAdmin() || isSupervisor()"
-                   [class.text-warning]="!(isAdmin() || isSupervisor()) && eventosActivos.length > 0"
-                   [class.text-secondary]="!(isAdmin() || isSupervisor()) && eventosActivos.length === 0"></i>
+                <i class="bi bi-calendar-check fs-4 me-3"
+                   [class.text-warning]="eventosActivos.length > 0"
+                   [class.text-secondary]="eventosActivos.length === 0"></i>
                 <div class="lh-1 flex-grow-1">
-                  <h6 class="mb-0" [class.text-primary]="isAdmin() || isSupervisor()">
-                    {{ isAdmin() || isSupervisor() ? 'Eventos' : 'Mis Eventos' }}
-                  </h6>
-                  <small class="text-muted" style="font-size:0.75rem">
-                    {{ isAdmin() || isSupervisor() ? 'Gestion Admin' : 'Pendientes/Respondidos' }}
-                  </small>
+                  <h6 class="mb-0">Mis Eventos</h6>
+                  <small class="text-muted" style="font-size:0.75rem">Pendientes/Respondidos</small>
                 </div>
-                <span *ngIf="eventosActivos.length > 0 && !(isAdmin() || isSupervisor())"
-                      class="badge bg-warning text-dark">
+                <span *ngIf="eventosActivos.length > 0" class="badge bg-warning text-dark">
                   {{ eventosActivos.length }}
                 </span>
+              </a>
+
+              <a *ngIf="isAdmin() || isSupervisor()"
+                 routerLink="/eventos"
+                 [queryParams]="{modo: 'admin'}"
+                 class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center bg-primary bg-opacity-10">
+                <i class="bi bi-calendar-event text-primary fs-4 me-3"></i>
+                <div class="lh-1">
+                  <h6 class="mb-0 text-primary">Gestión Eventos</h6>
+                  <small class="text-muted" style="font-size:0.75rem">Administración</small>
+                </div>
               </a>
 
             </div>

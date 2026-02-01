@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { EventosService } from '../../services/eventos';
 import { NotificationService } from '../../services/notification.service';
@@ -21,13 +21,27 @@ export class EventosComponent implements OnInit {
   private notification = inject(NotificationService);
   private apiConfig = inject(ApiConfigService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   eventos: Evento[] = [];
   isLoading = false;
   filtroEstado = 'todos';
 
+  // Modo de vista: 'mis-eventos' (todos) o 'gestion' (solo admin)
+  modoVista: 'mis-eventos' | 'gestion' = 'mis-eventos';
+
   // Para empleados
   filtroMisEventos: 'pendientes' | 'respondidos' = 'pendientes';
+
+  // Filtro de fecha (por defecto últimos 7 días)
+  filtroDias: number = 7;
+  opcionesDias = [
+    { value: 7, label: 'Últimos 7 días' },
+    { value: 15, label: 'Últimos 15 días' },
+    { value: 30, label: 'Últimos 30 días' },
+    { value: 90, label: 'Últimos 3 meses' },
+    { value: 0, label: 'Todos' }
+  ];
 
   // Modal crear/editar
   mostrarModalEvento = false;
@@ -60,8 +74,17 @@ export class EventosComponent implements OnInit {
   ];
 
   ngOnInit() {
+    // Verificar si viene con modo=admin en query params
+    this.route.queryParams.subscribe(params => {
+      if (params['modo'] === 'admin' && this.puedeGestionar()) {
+        this.modoVista = 'gestion';
+      } else {
+        this.modoVista = 'mis-eventos';
+      }
+      this.cargarEventos();
+    });
+
     this.actualizarFechaMinima();
-    this.cargarEventos();
   }
 
   actualizarFechaMinima() {
@@ -69,15 +92,26 @@ export class EventosComponent implements OnInit {
     this.fechaMinima = ahora.toISOString().slice(0, 16);
   }
 
-  esAdmin(): boolean {
+  // Puede gestionar eventos (admin/supervisor)
+  puedeGestionar(): boolean {
     return this.auth.isAdmin() || this.auth.isSupervisor();
+  }
+
+  // Mostrar vista de gestión (admin mode)
+  esVistaGestion(): boolean {
+    return this.modoVista === 'gestion' && this.puedeGestionar();
+  }
+
+  // Alias para compatibilidad
+  esAdmin(): boolean {
+    return this.esVistaGestion();
   }
 
   cargarEventos() {
     this.isLoading = true;
 
-    if (this.esAdmin()) {
-      // Admin/Supervisor: cargar todos los eventos
+    if (this.esVistaGestion()) {
+      // Vista gestión: cargar todos los eventos
       this.eventosService.getTodosEventos().subscribe({
         next: (eventos) => {
           this.eventos = eventos;
@@ -89,7 +123,7 @@ export class EventosComponent implements OnInit {
         }
       });
     } else {
-      // Empleados: cargar solo eventos activos
+      // Vista Mis Eventos: cargar solo eventos activos para el usuario
       this.eventosService.getEventosActivos().subscribe({
         next: (eventos) => {
           this.eventos = eventos;
@@ -111,21 +145,39 @@ export class EventosComponent implements OnInit {
     return this.eventos.filter(e => e.estado === this.filtroEstado);
   }
 
-  // Filtrado para empleados
-  get misEventosFiltrados(): Evento[] {
-    if (this.filtroMisEventos === 'pendientes') {
-      return this.eventos.filter(e => !e.yaRespondio);
+  // Filtrar por fecha (últimos N días)
+  filtrarPorFecha(eventos: Evento[]): Evento[] {
+    if (this.filtroDias === 0) {
+      return eventos; // Mostrar todos
     }
-    return this.eventos.filter(e => e.yaRespondio);
+
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() - this.filtroDias);
+
+    return eventos.filter(e => {
+      if (!e.fechaInicio) return true;
+      const fechaEvento = new Date(e.fechaInicio);
+      return fechaEvento >= fechaLimite;
+    });
   }
 
-  // Contadores para empleados
+  // Filtrado para empleados (aplica filtro de fecha)
+  get misEventosFiltrados(): Evento[] {
+    let resultado = this.filtrarPorFecha(this.eventos);
+
+    if (this.filtroMisEventos === 'pendientes') {
+      return resultado.filter(e => !e.yaRespondio);
+    }
+    return resultado.filter(e => e.yaRespondio);
+  }
+
+  // Contadores para empleados (aplican filtro de fecha)
   get eventosPendientesCount(): number {
-    return this.eventos.filter(e => !e.yaRespondio).length;
+    return this.filtrarPorFecha(this.eventos).filter(e => !e.yaRespondio).length;
   }
 
   get eventosRespondidosCount(): number {
-    return this.eventos.filter(e => e.yaRespondio).length;
+    return this.filtrarPorFecha(this.eventos).filter(e => e.yaRespondio).length;
   }
 
   nuevoEvento(): EventoRequest {

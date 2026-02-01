@@ -50,7 +50,7 @@
 
           <li class="nav-item">
             <a class="nav-link text-white" routerLink="/eventos" routerLinkActive="active">
-              <i class="bi bi-calendar-event me-2"></i> Eventos
+              <i class="bi bi-calendar-check me-2"></i> Mis Eventos
             </a>
           </li>
 
@@ -58,16 +58,23 @@
             <li class="nav-item mt-4 mb-2 ps-3">
               <span class="text-warning small fw-bold text-uppercase ls-1">Administración</span>
             </li>
-            
+
             <li class="nav-item">
               <a class="nav-link text-white" routerLink="/empleados" routerLinkActive="active">
                 <i class="bi bi-people me-2"></i> Empleados
               </a>
             </li>
-            
+
             <li class="nav-item">
               <a class="nav-link text-white" routerLink="/reportes" routerLinkActive="active">
                 <i class="bi bi-file-earmark-bar-graph me-2"></i> Reportes
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link text-white" routerLink="/eventos" routerLinkActive="active"
+                 [queryParams]="{modo: 'admin'}">
+                <i class="bi bi-calendar-event me-2"></i> Gestión Eventos
               </a>
             </li>
           </ng-container>
