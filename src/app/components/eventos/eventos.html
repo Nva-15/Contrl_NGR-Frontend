@@ -20,31 +20,43 @@
     <!-- Filtros para admin -->
     <div class="card mb-4">
       <div class="card-body py-2">
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-sm"
-                  [class.btn-primary]="filtroEstado === 'todos'"
-                  [class.btn-outline-secondary]="filtroEstado !== 'todos'"
-                  (click)="filtroEstado = 'todos'">
-            Todos ({{ eventos.length }})
-          </button>
-          <button class="btn btn-sm"
-                  [class.btn-success]="filtroEstado === 'ACTIVO'"
-                  [class.btn-outline-success]="filtroEstado !== 'ACTIVO'"
-                  (click)="filtroEstado = 'ACTIVO'">
-            Activos
-          </button>
-          <button class="btn btn-sm"
-                  [class.btn-secondary]="filtroEstado === 'BORRADOR'"
-                  [class.btn-outline-secondary]="filtroEstado !== 'BORRADOR'"
-                  (click)="filtroEstado = 'BORRADOR'">
-            Borradores
-          </button>
-          <button class="btn btn-sm"
-                  [class.btn-primary]="filtroEstado === 'FINALIZADO'"
-                  [class.btn-outline-primary]="filtroEstado !== 'FINALIZADO'"
-                  (click)="filtroEstado = 'FINALIZADO'">
-            Finalizados
-          </button>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <!-- Filtro por estado -->
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm"
+                    [class.btn-primary]="filtroEstado === 'todos'"
+                    [class.btn-outline-secondary]="filtroEstado !== 'todos'"
+                    (click)="cambiarFiltroEstado('todos')">
+              Todos ({{ eventosFiltrados.length }})
+            </button>
+            <button class="btn btn-sm"
+                    [class.btn-success]="filtroEstado === 'ACTIVO'"
+                    [class.btn-outline-success]="filtroEstado !== 'ACTIVO'"
+                    (click)="cambiarFiltroEstado('ACTIVO')">
+              Activos
+            </button>
+            <button class="btn btn-sm"
+                    [class.btn-secondary]="filtroEstado === 'BORRADOR'"
+                    [class.btn-outline-secondary]="filtroEstado !== 'BORRADOR'"
+                    (click)="cambiarFiltroEstado('BORRADOR')">
+              Borradores
+            </button>
+            <button class="btn btn-sm"
+                    [class.btn-primary]="filtroEstado === 'FINALIZADO'"
+                    [class.btn-outline-primary]="filtroEstado !== 'FINALIZADO'"
+                    (click)="cambiarFiltroEstado('FINALIZADO')">
+              Finalizados
+            </button>
+          </div>
+          <!-- Filtro por fecha -->
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-calendar3 text-muted"></i>
+            <select class="form-select form-select-sm" [(ngModel)]="filtroDiasAdmin" style="width: auto;">
+              <option *ngFor="let opcion of opcionesDiasAdmin" [ngValue]="opcion.value">
+                {{ opcion.label }}
+              </option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -154,7 +166,7 @@
           <div class="d-flex align-items-center gap-2">
             <i class="bi bi-calendar3 text-muted"></i>
             <select class="form-select form-select-sm" [(ngModel)]="filtroDias" style="width: auto;">
-              <option *ngFor="let opcion of opcionesDias" [value]="opcion.value">
+              <option *ngFor="let opcion of opcionesDias" [ngValue]="opcion.value">
                 {{ opcion.label }}
               </option>
             </select>

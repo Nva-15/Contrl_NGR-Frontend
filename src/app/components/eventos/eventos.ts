@@ -33,14 +33,25 @@ export class EventosComponent implements OnInit {
   // Para empleados
   filtroMisEventos: 'pendientes' | 'respondidos' = 'pendientes';
 
-  // Filtro de fecha (por defecto últimos 7 días)
+  // Filtro de fecha para Mis Eventos (por defecto últimos 7 días)
   filtroDias: number = 7;
   opcionesDias = [
     { value: 7, label: 'Últimos 7 días' },
     { value: 15, label: 'Últimos 15 días' },
     { value: 30, label: 'Últimos 30 días' },
     { value: 90, label: 'Últimos 3 meses' },
-    { value: 0, label: 'Todos' }
+    { value: -1, label: 'Todos' }
+  ];
+
+  // Filtro de fecha para Gestión (por defecto Hoy)
+  filtroDiasAdmin: number = 0;
+  opcionesDiasAdmin = [
+    { value: 0, label: 'Hoy' },
+    { value: 7, label: 'Últimos 7 días' },
+    { value: 15, label: 'Últimos 15 días' },
+    { value: 30, label: 'Último mes' },
+    { value: 90, label: 'Últimos 3 meses' },
+    { value: -1, label: 'Todos' }
   ];
 
   // Modal crear/editar
@@ -74,9 +85,9 @@ export class EventosComponent implements OnInit {
   ];
 
   ngOnInit() {
-    // Verificar si viene con modo=admin en query params
+    // Verificar si viene con modo=gestion o modo=admin en query params
     this.route.queryParams.subscribe(params => {
-      if (params['modo'] === 'admin' && this.puedeGestionar()) {
+      if ((params['modo'] === 'gestion' || params['modo'] === 'admin') && this.puedeGestionar()) {
         this.modoVista = 'gestion';
       } else {
         this.modoVista = 'mis-eventos';
@@ -89,7 +100,17 @@ export class EventosComponent implements OnInit {
 
   actualizarFechaMinima() {
     const ahora = new Date();
-    this.fechaMinima = ahora.toISOString().slice(0, 16);
+    this.fechaMinima = this.formatLocalDateTime(ahora);
+  }
+
+  // Formatea una fecha como 'YYYY-MM-DDTHH:mm' usando hora local (Peru)
+  private formatLocalDateTime(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
   // Puede gestionar eventos (admin/supervisor)
@@ -137,17 +158,62 @@ export class EventosComponent implements OnInit {
     }
   }
 
-  // Filtrado para admin
+  // Filtrado para admin (aplica filtro de estado y fecha)
   get eventosFiltrados(): Evento[] {
+    let resultado = this.filtrarPorFechaAdmin(this.eventos);
+
     if (this.filtroEstado === 'todos') {
-      return this.eventos;
+      return resultado;
     }
-    return this.eventos.filter(e => e.estado === this.filtroEstado);
+    return resultado.filter(e => e.estado === this.filtroEstado);
   }
 
-  // Filtrar por fecha (últimos N días)
+  // Filtrar por fecha para admin (con opción Hoy)
+  filtrarPorFechaAdmin(eventos: Evento[]): Evento[] {
+    if (this.filtroDiasAdmin === -1) {
+      return eventos; // Mostrar todos
+    }
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+
+    if (this.filtroDiasAdmin === 0) {
+      // Hoy: eventos que iniciaron hoy o están activos hoy (no futuros)
+      return eventos.filter(e => {
+        if (!e.fechaInicio) return true;
+        const fechaEvento = new Date(e.fechaInicio);
+        fechaEvento.setHours(0, 0, 0, 0);
+        // Evento inicia hoy O evento inició antes y sigue activo hoy
+        return fechaEvento.getTime() === hoy.getTime() ||
+               (fechaEvento < hoy && (!e.fechaFin || new Date(e.fechaFin) >= hoy));
+      });
+    }
+
+    // Últimos N días (no incluye eventos futuros)
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() - this.filtroDiasAdmin);
+    fechaLimite.setHours(0, 0, 0, 0);
+
+    return eventos.filter(e => {
+      if (!e.fechaInicio) return true;
+      const fechaEvento = new Date(e.fechaInicio);
+      // Evento dentro del rango Y no es futuro (inicia antes de mañana)
+      return fechaEvento >= fechaLimite && fechaEvento < manana;
+    });
+  }
+
+  // Cambiar filtro de estado y resetear filtro de fecha a Hoy
+  cambiarFiltroEstado(estado: string) {
+    this.filtroEstado = estado;
+    this.filtroDiasAdmin = 0; // Reset a "Hoy"
+  }
+
+  // Filtrar por fecha para Mis Eventos (últimos N días)
   filtrarPorFecha(eventos: Evento[]): Evento[] {
-    if (this.filtroDias === 0) {
+    if (this.filtroDias === -1) {
       return eventos; // Mostrar todos
     }
 
@@ -182,12 +248,17 @@ export class EventosComponent implements OnInit {
 
   nuevoEvento(): EventoRequest {
     this.actualizarFechaMinima();
+    // Fecha fin por defecto: mismo día a las 23:59
+    const fechaFinDefault = new Date();
+    fechaFinDefault.setHours(23, 59, 0, 0);
+    const fechaFinStr = this.formatLocalDateTime(fechaFinDefault);
+
     return {
       titulo: '',
       descripcion: '',
       tipoEvento: 'INFORMATIVO',
       fechaInicio: this.fechaMinima,
-      fechaFin: '',
+      fechaFin: fechaFinStr,
       rolesVisibles: ['admin', 'supervisor', 'tecnico', 'hd', 'noc'],
       permiteComentarios: true,
       requiereRespuesta: true,

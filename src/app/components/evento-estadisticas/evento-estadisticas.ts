@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EventosService } from '../../services/eventos';
 import { ExportService } from '../../services/export';
@@ -10,7 +11,7 @@ import { Evento, EstadisticasEvento, RespuestaEvento, ComentarioEvento } from '.
 @Component({
   selector: 'app-evento-estadisticas',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './evento-estadisticas.html',
   styleUrls: ['./evento-estadisticas.css']
 })
@@ -30,6 +31,16 @@ export class EventoEstadisticasComponent implements OnInit {
 
   isLoading = true;
   activeTab: 'resumen' | 'respuestas' | 'comentarios' = 'resumen';
+
+  // Filtro de fecha para respuestas (por defecto: Hoy)
+  filtroDias: number = 0; // 0 = Hoy
+  opcionesDias = [
+    { value: 0, label: 'Hoy' },
+    { value: 7, label: 'Últimos 7 días' },
+    { value: 15, label: 'Últimos 15 días' },
+    { value: 30, label: 'Último mes' },
+    { value: -1, label: 'Todos' }
+  ];
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
@@ -85,7 +96,67 @@ export class EventoEstadisticasComponent implements OnInit {
   }
 
   volver() {
-    this.router.navigate(['/eventos']);
+    this.router.navigate(['/eventos'], { queryParams: { modo: 'gestion' } });
+  }
+
+  // Filtrar respuestas por fecha
+  get respuestasFiltradas(): RespuestaEvento[] {
+    if (this.filtroDias === -1) {
+      return this.respuestas; // Todos
+    }
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    if (this.filtroDias === 0) {
+      // Hoy
+      return this.respuestas.filter(r => {
+        if (!r.fechaRespuesta) return false;
+        const fechaResp = new Date(r.fechaRespuesta);
+        fechaResp.setHours(0, 0, 0, 0);
+        return fechaResp.getTime() === hoy.getTime();
+      });
+    }
+
+    // Últimos N días
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() - this.filtroDias);
+    fechaLimite.setHours(0, 0, 0, 0);
+
+    return this.respuestas.filter(r => {
+      if (!r.fechaRespuesta) return false;
+      const fechaResp = new Date(r.fechaRespuesta);
+      return fechaResp >= fechaLimite;
+    });
+  }
+
+  // Filtrar comentarios por fecha
+  get comentariosFiltrados(): ComentarioEvento[] {
+    if (this.filtroDias === -1) {
+      return this.comentarios;
+    }
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    if (this.filtroDias === 0) {
+      return this.comentarios.filter(c => {
+        if (!c.fechaComentario) return false;
+        const fechaCom = new Date(c.fechaComentario);
+        fechaCom.setHours(0, 0, 0, 0);
+        return fechaCom.getTime() === hoy.getTime();
+      });
+    }
+
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() - this.filtroDias);
+    fechaLimite.setHours(0, 0, 0, 0);
+
+    return this.comentarios.filter(c => {
+      if (!c.fechaComentario) return false;
+      const fechaCom = new Date(c.fechaComentario);
+      return fechaCom >= fechaLimite;
+    });
   }
 
   getTipoEventoLabel(tipo: string): string {
@@ -191,7 +262,7 @@ export class EventoEstadisticasComponent implements OnInit {
   }
 
   private prepararDatosExport(): any[] {
-    return this.respuestas.map(r => ({
+    return this.respuestasFiltradas.map(r => ({
       empleado: r.empleadoNombre || 'Sin nombre',
       respuesta: this.getRespuestaTexto(r),
       comentario: r.comentario || '-',
