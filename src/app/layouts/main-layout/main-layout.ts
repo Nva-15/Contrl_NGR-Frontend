@@ -19,6 +19,7 @@ export class MainLayoutComponent implements OnInit {
   currentEmpleado: any;
   fotoUrl: string = '';
   isMenuCollapsed = false;
+  menuMobilAbierto = false;
 
   ngOnInit() {
     this.currentEmpleado = this.auth.getCurrentEmpleado();
@@ -58,6 +59,14 @@ export class MainLayoutComponent implements OnInit {
 
   toggleMenu() {
     this.isMenuCollapsed = !this.isMenuCollapsed;
+  }
+
+  toggleMenuMobil() {
+    this.menuMobilAbierto = !this.menuMobilAbierto;
+  }
+
+  cerrarMenuMobil() {
+    this.menuMobilAbierto = false;
   }
 
   logout() {
