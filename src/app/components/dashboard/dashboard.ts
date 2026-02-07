@@ -467,7 +467,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.currentEmpleado.rol === 'admin') return;
 
     this.isLoadingHorario = true;
-    this.horariosService.getHorarioSemanalEmpleado(this.currentEmpleado.id).subscribe({
+    // Usar horario semanal activo (nuevo sistema) en vez de horario base (tabla vieja)
+    this.horariosService.getMiHorarioVigente(this.currentEmpleado.id).subscribe({
       next: (data) => {
         this.horarioSemanal = data;
         this.isLoadingHorario = false;

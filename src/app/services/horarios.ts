@@ -95,6 +95,12 @@ export class HorariosService {
     );
   }
 
+  getMiHorarioVigente(empleadoId: number): Observable<HorarioSemanal> {
+    return this.http.get<HorarioSemanal>(`${this.apiUrlSemanal}/mi-horario/${empleadoId}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   aplicarHorarioMultiplesDias(empleadoId: number, datos: any): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/empleado/${empleadoId}/dias-multiples`, datos).pipe(
       catchError(this.handleError)
