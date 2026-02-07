@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -15,7 +15,7 @@ import { Evento, EstadisticasEvento, RespuestaEvento, ComentarioEvento } from '.
   templateUrl: './evento-estadisticas.html',
   styleUrls: ['./evento-estadisticas.css']
 })
-export class EventoEstadisticasComponent implements OnInit {
+export class EventoEstadisticasComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private eventosService = inject(EventosService);
@@ -31,6 +31,7 @@ export class EventoEstadisticasComponent implements OnInit {
 
   isLoading = true;
   activeTab: 'resumen' | 'respuestas' | 'comentarios' = 'resumen';
+  private intervaloAutoRefresh: any;
 
   // Filtro de fecha para respuestas (por defecto: Hoy)
   filtroDias: number = 0; // 0 = Hoy
@@ -47,9 +48,27 @@ export class EventoEstadisticasComponent implements OnInit {
     if (id) {
       this.eventoId = parseInt(id);
       this.cargarDatos();
+      this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
     } else {
       this.router.navigate(['/eventos']);
     }
+  }
+
+  ngOnDestroy() {
+    if (this.intervaloAutoRefresh) clearInterval(this.intervaloAutoRefresh);
+  }
+
+  private refrescarDatos() {
+    if (this.isLoading || !this.eventoId) return;
+    this.eventosService.getEstadisticas(this.eventoId).subscribe({
+      next: (stats) => this.estadisticas = stats
+    });
+    this.eventosService.getRespuestasEvento(this.eventoId).subscribe({
+      next: (respuestas) => this.respuestas = respuestas
+    });
+    this.eventosService.getComentarios(this.eventoId).subscribe({
+      next: (comentarios) => this.comentarios = comentarios
+    });
   }
 
   cargarDatos() {

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HorariosService } from '../../services/horarios';
@@ -21,7 +21,7 @@ import {
   templateUrl: './horarios.html',
   styleUrls: ['./horarios.css']
 })
-export class HorariosComponent implements OnInit {
+export class HorariosComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private horariosService = inject(HorariosService);
   private authService = inject(AuthService);
@@ -59,6 +59,8 @@ export class HorariosComponent implements OnInit {
   aplicarAOtrosDias = false;
   diasSeleccionados: { [key: string]: boolean } = {};
   otrosDiasDisponibles: { fecha: string; dia: DetalleHorarioDia; label: string }[] = [];
+
+  private intervaloAutoRefresh: any;
 
   diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 
@@ -105,6 +107,23 @@ export class HorariosComponent implements OnInit {
       this.filtroRol = rol;
     }
     this.cargarSemanas();
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervaloAutoRefresh) clearInterval(this.intervaloAutoRefresh);
+  }
+
+  private refrescarDatos() {
+    if (this.isLoading || this.mostrarModal || this.mostrarModalCrear) return;
+    if (this.semanaSeleccionada) {
+      this.horariosService.getSemanaById(this.semanaSeleccionada.id).subscribe({
+        next: (semana) => {
+          this.semanaSeleccionada = semana;
+          this.aplicarFiltros();
+        }
+      });
+    }
   }
 
   initHorarioForm(): FormGroup {

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,7 +17,7 @@ import { ApiConfigService } from '../../services/api-config.service';
   templateUrl: './empleados.html',
   styleUrls: ['./empleados.css']
 })
-export class EmpleadosComponent implements OnInit {
+export class EmpleadosComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef;
 
   fb = inject(FormBuilder);
@@ -71,6 +71,7 @@ export class EmpleadosComponent implements OnInit {
 
   empleadoOriginal: any = null;
   formHasChanges = false;
+  private intervaloAutoRefresh: any;
 
   constructor() {
     this.fechaHoy = new Date().toISOString().split('T')[0];
@@ -80,6 +81,21 @@ export class EmpleadosComponent implements OnInit {
   ngOnInit() {
     this.cargarEmpleados();
     this.setupListeners();
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervaloAutoRefresh) clearInterval(this.intervaloAutoRefresh);
+  }
+
+  private refrescarDatos() {
+    if (this.isLoading || this.vista !== 'lista' || this.mostrarModalEliminar) return;
+    this.empService.getEmpleados().subscribe({
+      next: (data) => {
+        this.empleados = data;
+        this.filtrar();
+      }
+    });
   }
 
   initForm(): FormGroup {

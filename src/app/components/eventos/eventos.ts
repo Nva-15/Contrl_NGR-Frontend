@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -15,7 +15,7 @@ import { Evento, EventoRequest, RespuestaEventoRequest } from '../../interfaces/
   templateUrl: './eventos.html',
   styleUrls: ['./eventos.css']
 })
-export class EventosComponent implements OnInit {
+export class EventosComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private eventosService = inject(EventosService);
   private notification = inject(NotificationService);
@@ -66,6 +66,8 @@ export class EventosComponent implements OnInit {
   eventoResponder: Evento | null = null;
   respuestaEnviando = false;
 
+  private intervaloAutoRefresh: any;
+
   // Fecha minima para validacion
   fechaMinima: string = '';
 
@@ -96,6 +98,25 @@ export class EventosComponent implements OnInit {
     });
 
     this.actualizarFechaMinima();
+
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervaloAutoRefresh) clearInterval(this.intervaloAutoRefresh);
+  }
+
+  private refrescarDatos() {
+    if (this.isLoading || this.mostrarModalEvento || this.mostrarModalResponder) return;
+    if (this.esVistaGestion()) {
+      this.eventosService.getTodosEventos().subscribe({
+        next: (eventos) => this.eventos = eventos
+      });
+    } else {
+      this.eventosService.getEventosActivos().subscribe({
+        next: (eventos) => this.eventos = eventos
+      });
+    }
   }
 
   actualizarFechaMinima() {

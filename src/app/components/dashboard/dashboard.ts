@@ -24,6 +24,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   @ViewChild('fileInputModal') fileInputModal!: ElementRef;
 
   private intervaloReloj: any;
+  private intervaloAutoRefresh: any;
 
   private auth = inject(AuthService);
   private asistenciaService = inject(AsistenciaService);
@@ -96,13 +97,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.intervaloReloj = setInterval(() => {
       this.fechaActual = new Date();
     }, 1000);
+
+    // Auto-refresh datos cada 30 segundos
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
   }
 
   ngOnDestroy() {
-    // Limpiar el intervalo cuando el componente se destruya
-    if (this.intervaloReloj) {
-      clearInterval(this.intervaloReloj);
-    }
+    if (this.intervaloReloj) clearInterval(this.intervaloReloj);
+    if (this.intervaloAutoRefresh) clearInterval(this.intervaloAutoRefresh);
+  }
+
+  private refrescarDatos() {
+    if (this.isLoading || !this.currentEmpleado?.id) return;
+    this.asistenciaService.getAsistenciasPorEmpleado(this.currentEmpleado.id).subscribe({
+      next: (data: any[]) => {
+        const hoy = new Date().toLocaleDateString('en-CA');
+        this.asistenciaHoy = data.find((a: any) => a.fecha && a.fecha.toString().substring(0, 10) === hoy) || null;
+      }
+    });
+    this.eventosService.getEventosActivos().subscribe({
+      next: (eventos) => this.eventosActivos = eventos.filter(e => !e.yaRespondio)
+    });
   }
 
   private getFotoUrl(fotoPath: string | undefined, nombre: string): string {

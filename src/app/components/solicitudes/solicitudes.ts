@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SolicitudesService } from '../../services/solicitudes';
 import { AuthService } from '../../services/auth';
@@ -15,7 +15,7 @@ import { NotificationService } from '../../services/notification.service';
   imports: [CommonModule, FormsModule],
   templateUrl: './solicitudes.html'
 })
-export class SolicitudesComponent implements OnInit {
+export class SolicitudesComponent implements OnInit, OnDestroy {
   private solicitudesService = inject(SolicitudesService);
   private authService = inject(AuthService);
   private exportService = inject(ExportService);
@@ -76,6 +76,8 @@ export class SolicitudesComponent implements OnInit {
   mensaje = '';
   exportando = false;
 
+  private intervaloAutoRefresh: any;
+
   mostrarModalGestion = false;
   comentarioGestion = '';
   solicitudGestionandoId: number | null = null;
@@ -95,6 +97,27 @@ export class SolicitudesComponent implements OnInit {
     this.cargarDatos();
     if (this.esJefe()) {
       this.cargarTodosEmpleados();
+    }
+
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervaloAutoRefresh) clearInterval(this.intervaloAutoRefresh);
+  }
+
+  private refrescarDatos() {
+    if (this.isLoading || this.mostrarModalConflictos || this.mostrarModalGestion || this.activeTab === 'crear') return;
+    this.solicitudesService.getMisSolicitudes(this.currentUser.id).subscribe({
+      next: (data) => this.misSolicitudes = data
+    });
+    if (this.esJefe()) {
+      this.solicitudesService.getPendientes().subscribe({
+        next: (data) => this.solicitudesPendientes = data
+      });
+      this.solicitudesService.getHistorial().subscribe({
+        next: (data) => this.historialGlobal = data
+      });
     }
   }
 

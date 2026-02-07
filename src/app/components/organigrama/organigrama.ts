@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EmpleadosService } from '../../services/empleados';
 import { EmpleadoResponse } from '../../interfaces/empleado';
@@ -11,7 +11,7 @@ import { ApiConfigService } from '../../services/api-config.service';
   templateUrl: './organigrama.html',
   styleUrls: ['./organigrama.css']
 })
-export class OrganigramaComponent implements OnInit {
+export class OrganigramaComponent implements OnInit, OnDestroy {
   private empService = inject(EmpleadosService);
   private apiConfig = inject(ApiConfigService);
 
@@ -29,12 +29,29 @@ export class OrganigramaComponent implements OnInit {
 
   isLoading = true;
   isLoadingDetalle = false;
+  private intervaloAutoRefresh: any;
   private get apiUrl() {
     return this.apiConfig.baseUrl;
   }
 
   ngOnInit() {
     this.cargarDatos();
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervaloAutoRefresh) clearInterval(this.intervaloAutoRefresh);
+  }
+
+  private refrescarDatos() {
+    if (this.isLoading || this.mostrarDetalle) return;
+    this.empService.getEmpleados().subscribe({
+      next: (data) => {
+        const activos = data.filter(e => e.activo !== false);
+        this.clasificarPersonal(activos);
+        this.calcularCumpleanosSemanales(activos);
+      }
+    });
   }
 
   cargarDatos() {
