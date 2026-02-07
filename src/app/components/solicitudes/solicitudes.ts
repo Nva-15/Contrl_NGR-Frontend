@@ -76,6 +76,11 @@ export class SolicitudesComponent implements OnInit {
   mensaje = '';
   exportando = false;
 
+  mostrarModalGestion = false;
+  comentarioGestion = '';
+  solicitudGestionandoId: number | null = null;
+  estadoGestionando = '';
+
   ngOnInit() {
     this.currentUser = this.authService.getCurrentEmpleado();
 
@@ -132,15 +137,20 @@ export class SolicitudesComponent implements OnInit {
   }
 
   async corregirEstado(id: number, nuevoEstado: string) {
-    const estadoTexto = nuevoEstado === 'aprobado' ? 'APROBADO' : 'RECHAZADO';
-    const tipo = nuevoEstado === 'aprobado' ? 'success' : 'danger';
+    if (nuevoEstado === 'rechazado') {
+      this.solicitudGestionandoId = id;
+      this.estadoGestionando = nuevoEstado;
+      this.comentarioGestion = '';
+      this.mostrarModalGestion = true;
+      return;
+    }
 
     const confirmado = await this.notification.confirm({
       title: 'Corregir estado',
-      message: `Confirma que desea cambiar el estado de esta solicitud a ${estadoTexto}?`,
+      message: 'Confirma que desea cambiar el estado de esta solicitud a APROBADO?',
       confirmText: 'Si, corregir',
       cancelText: 'Cancelar',
-      type: tipo as 'success' | 'danger'
+      type: 'success'
     });
 
     if (!confirmado) return;
@@ -148,7 +158,7 @@ export class SolicitudesComponent implements OnInit {
     this.solicitudesService.gestionarSolicitud(id, nuevoEstado, this.currentUser.id).subscribe({
       next: () => {
         this.cargarDatos();
-        this.notification.success(`Estado corregido a ${estadoTexto} correctamente`, 'Estado corregido');
+        this.notification.success('Estado corregido a APROBADO correctamente', 'Estado corregido');
       },
       error: (err) => this.notification.error(err || 'Error al corregir el estado', 'Error')
     });
@@ -879,15 +889,20 @@ export class SolicitudesComponent implements OnInit {
   }
 
   async procesar(id: number, estado: string) {
-    const estadoTexto = estado === 'aprobado' ? 'APROBAR' : 'RECHAZAR';
-    const tipo = estado === 'aprobado' ? 'success' : 'danger';
+    if (estado === 'rechazado') {
+      this.solicitudGestionandoId = id;
+      this.estadoGestionando = estado;
+      this.comentarioGestion = '';
+      this.mostrarModalGestion = true;
+      return;
+    }
 
     const confirmado = await this.notification.confirm({
-      title: `${estadoTexto} Solicitud`,
-      message: `Confirma que desea ${estadoTexto.toLowerCase()} esta solicitud?`,
-      confirmText: estadoTexto,
+      title: 'APROBAR Solicitud',
+      message: 'Confirma que desea aprobar esta solicitud?',
+      confirmText: 'APROBAR',
       cancelText: 'Cancelar',
-      type: tipo
+      type: 'success'
     });
 
     if (!confirmado) return;
@@ -895,14 +910,43 @@ export class SolicitudesComponent implements OnInit {
     this.solicitudesService.gestionarSolicitud(id, estado, this.currentUser.id).subscribe({
       next: () => {
         this.cargarDatos();
-        if (estado === 'aprobado') {
-          this.notification.success('La solicitud ha sido aprobada correctamente.', 'Solicitud aprobada');
-        } else {
-          this.notification.info('La solicitud ha sido rechazada.', 'Solicitud rechazada');
-        }
+        this.notification.success('La solicitud ha sido aprobada correctamente.', 'Solicitud aprobada');
       },
       error: () => this.notification.error('Error al procesar la solicitud', 'Error')
     });
+  }
+
+  confirmarGestion() {
+    if (!this.solicitudGestionandoId) return;
+
+    const id = this.solicitudGestionandoId;
+    const estado = this.estadoGestionando;
+    const comentario = this.comentarioGestion.trim() || undefined;
+
+    this.mostrarModalGestion = false;
+
+    this.solicitudesService.gestionarSolicitud(id, estado, this.currentUser.id, comentario).subscribe({
+      next: () => {
+        this.cargarDatos();
+        this.notification.info('La solicitud ha sido rechazada.', 'Solicitud rechazada');
+        this.resetModalGestion();
+      },
+      error: () => {
+        this.notification.error('Error al procesar la solicitud', 'Error');
+        this.resetModalGestion();
+      }
+    });
+  }
+
+  cancelarGestion() {
+    this.resetModalGestion();
+  }
+
+  private resetModalGestion() {
+    this.mostrarModalGestion = false;
+    this.comentarioGestion = '';
+    this.solicitudGestionandoId = null;
+    this.estadoGestionando = '';
   }
 
   async eliminarSolicitud(id: number) {

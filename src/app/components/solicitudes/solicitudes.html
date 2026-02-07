@@ -828,4 +828,55 @@
   <!-- Backdrop del Modal de Conflictos -->
   <div class="modal-backdrop fade show" *ngIf="mostrarModalConflictos"></div>
 
+  <!-- Modal de Gestión (Rechazar con comentario) -->
+  <div class="modal fade show"
+       [class.d-block]="mostrarModalGestion"
+       [style.display]="mostrarModalGestion ? 'block' : 'none'"
+       tabindex="-1"
+       role="dialog"
+       *ngIf="mostrarModalGestion">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-x-circle me-2"></i>
+            Rechazar Solicitud
+          </h5>
+          <button type="button"
+                  class="btn-close btn-close-white"
+                  (click)="cancelarGestion()">
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted">Indique el motivo del rechazo de esta solicitud:</p>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Motivo / Comentario</label>
+            <textarea class="form-control" rows="4"
+                      [(ngModel)]="comentarioGestion"
+                      placeholder="Escriba el motivo del rechazo..."
+                      maxlength="500"></textarea>
+            <small class="form-text text-muted">
+              <i class="bi bi-envelope me-1"></i>Este comentario se enviara por correo al empleado.
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button"
+                  class="btn btn-secondary"
+                  (click)="cancelarGestion()">
+            <i class="bi bi-arrow-left me-1"></i>
+            Cancelar
+          </button>
+          <button type="button"
+                  class="btn btn-danger"
+                  (click)="confirmarGestion()">
+            <i class="bi bi-x-circle me-1"></i>
+            Confirmar Rechazo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="mostrarModalGestion"></div>
+
 </div>
