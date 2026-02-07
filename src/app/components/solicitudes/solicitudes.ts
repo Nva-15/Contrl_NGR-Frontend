@@ -220,6 +220,11 @@ export class SolicitudesComponent implements OnInit {
       return;
     }
 
+    if (!this.nuevaSolicitud.motivo || !this.nuevaSolicitud.motivo.trim()) {
+      this.notification.warning('Por favor ingresa el motivo de la solicitud', 'Campos requeridos');
+      return;
+    }
+
     if (this.nuevaSolicitud.fechaInicio > this.nuevaSolicitud.fechaFin) {
       this.notification.warning('La fecha de fin no puede ser anterior a la fecha de inicio', 'Fechas invalidas');
       return;
@@ -357,6 +362,11 @@ export class SolicitudesComponent implements OnInit {
   guardarEdicion() {
     if (!this.editandoSolicitud.fechaInicio || !this.editandoSolicitud.fechaFin) {
       this.notification.warning('Por favor selecciona las fechas de inicio y fin', 'Campos requeridos');
+      return;
+    }
+
+    if (!this.editandoSolicitud.motivo || !this.editandoSolicitud.motivo.trim()) {
+      this.notification.warning('Por favor ingresa el motivo de la solicitud', 'Campos requeridos');
       return;
     }
 

@@ -869,7 +869,8 @@
           </button>
           <button type="button"
                   class="btn btn-danger"
-                  (click)="confirmarGestion()">
+                  (click)="confirmarGestion()"
+                  [disabled]="!comentarioGestion.trim()">
             <i class="bi bi-x-circle me-1"></i>
             Confirmar Rechazo
           </button>
