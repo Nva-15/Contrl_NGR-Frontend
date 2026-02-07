@@ -143,6 +143,13 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
     if (!solicitud.estado || !this.currentUser) return false;
     if (!['aprobado', 'rechazado'].includes(solicitud.estado)) return false;
 
+    // Si la fecha fin de la solicitud ya paso (antes de hoy), no permitir cambio
+    if (solicitud.fechaFin) {
+      const fechaFinStr = solicitud.fechaFin.split('T')[0];
+      const hoy = this.getFechaActual();
+      if (fechaFinStr < hoy) return false;
+    }
+
     const esMiSolicitud = solicitud.empleadoId === this.currentUser.id;
     if (esMiSolicitud) return false;
 
@@ -627,6 +634,10 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
       }
 
       return matchRol && matchTipo && matchEstado && matchEmpleado && matchFecha;
+    }).sort((a, b) => {
+      const fechaA = a.fechaAprobacion || a.fechaSolicitud || '';
+      const fechaB = b.fechaAprobacion || b.fechaSolicitud || '';
+      return fechaB.localeCompare(fechaA);
     });
   }
 
