@@ -37,11 +37,14 @@
           </li>
           
           <li class="nav-item">
-            <a class="nav-link text-white" routerLink="/solicitudes" routerLinkActive="active">
+            <a class="nav-link text-white d-flex align-items-center" routerLink="/solicitudes" routerLinkActive="active">
               <i class="bi bi-send-check me-2"></i> Solicitudes
+              <span class="badge-sidebar bg-warning text-dark ms-auto" *ngIf="getBadgeSolicitudes() > 0">
+                {{ getBadgeSolicitudes() }}
+              </span>
             </a>
           </li>
-          
+
           <li class="nav-item">
             <a class="nav-link text-white" routerLink="/organigrama" routerLinkActive="active">
               <i class="bi bi-diagram-3 me-2"></i> Organigrama
@@ -49,8 +52,11 @@
           </li>
 
           <li class="nav-item">
-            <a class="nav-link text-white" routerLink="/eventos" routerLinkActive="active">
+            <a class="nav-link text-white d-flex align-items-center" routerLink="/eventos" routerLinkActive="active">
               <i class="bi bi-calendar-check me-2"></i> Mis Eventos
+              <span class="badge-sidebar bg-info ms-auto" *ngIf="getBadgeEventos() > 0">
+                {{ getBadgeEventos() }}
+              </span>
             </a>
           </li>
 
@@ -89,7 +95,7 @@
                class="rounded-circle border border-white me-2 bg-white"
                width="40"
                height="40"
-               loading="lazy"
+               loading="eager"
                decoding="async"
                style="object-fit: cover;">
                
@@ -156,8 +162,11 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link text-white" routerLink="/solicitudes" routerLinkActive="active" (click)="cerrarMenuMobil()">
+            <a class="nav-link text-white d-flex align-items-center" routerLink="/solicitudes" routerLinkActive="active" (click)="cerrarMenuMobil()">
               <i class="bi bi-send-check me-2"></i> Solicitudes
+              <span class="badge-sidebar bg-warning text-dark ms-auto" *ngIf="getBadgeSolicitudes() > 0">
+                {{ getBadgeSolicitudes() }}
+              </span>
             </a>
           </li>
           <li class="nav-item">
@@ -166,8 +175,11 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link text-white" routerLink="/eventos" routerLinkActive="active" (click)="cerrarMenuMobil()">
+            <a class="nav-link text-white d-flex align-items-center" routerLink="/eventos" routerLinkActive="active" (click)="cerrarMenuMobil()">
               <i class="bi bi-calendar-check me-2"></i> Mis Eventos
+              <span class="badge-sidebar bg-info ms-auto" *ngIf="getBadgeEventos() > 0">
+                {{ getBadgeEventos() }}
+              </span>
             </a>
           </li>
 

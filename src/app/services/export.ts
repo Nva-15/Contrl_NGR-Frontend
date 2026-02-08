@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveAs } from 'file-saver';
+import { NotificationService } from './notification.service';
 
 interface ColumnConfig {
   header: string;
@@ -20,9 +21,11 @@ interface ExportOptions {
 
 @Injectable({ providedIn: 'root' })
 export class ExportService {
+  private notification = inject(NotificationService);
+
   exportToExcel(data: any[], fileName: string, sheetName: string = 'Datos'): void {
     if (!data.length) {
-      alert('No hay datos para exportar');
+      this.notification.warning('No hay datos para exportar', 'Exportar');
       return;
     }
 
@@ -38,7 +41,7 @@ export class ExportService {
 
   exportToPDF(data: any[], columns: ColumnConfig[], options: ExportOptions = {}): void {
     if (!data.length) {
-      alert('No hay datos para exportar');
+      this.notification.warning('No hay datos para exportar', 'Exportar');
       return;
     }
 
@@ -139,14 +142,4 @@ export class ExportService {
     return weights.map(w => (w / totalWeight) * availableWidth);
   }
 
-  private calcWidth(header: string, data: any[], dataKey: string): number {
-    let maxLen = header.length;
-    data.forEach(item => {
-      const val = item[dataKey];
-      if (val && String(val).length > maxLen) {
-        maxLen = String(val).length;
-      }
-    });
-    return Math.min(Math.max(maxLen * 2, 15), 60);
-  }
 }

@@ -36,7 +36,7 @@ export class OrganigramaComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.cargarDatos();
-    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 5000);
   }
 
   ngOnDestroy() {

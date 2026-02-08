@@ -1,8 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { ApiConfigService } from '../../services/api-config.service';
+import { NotificacionesService } from '../../services/notificaciones';
+import { NotificacionResumen } from '../../interfaces/notificacion';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-main-layout',
@@ -11,19 +14,25 @@ import { ApiConfigService } from '../../services/api-config.service';
   templateUrl: './main-layout.html',
   styleUrls: ['./main-layout.css']
 })
-export class MainLayoutComponent implements OnInit {
+export class MainLayoutComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private router = inject(Router);
   private apiConfig = inject(ApiConfigService);
+  private notificacionesService = inject(NotificacionesService);
 
   currentEmpleado: any;
   fotoUrl: string = '';
   isMenuCollapsed = false;
   menuMobilAbierto = false;
 
+  // Badges
+  resumen: NotificacionResumen | null = null;
+  private resumenSub?: Subscription;
+  private refreshInterval: any;
+
   ngOnInit() {
     this.currentEmpleado = this.auth.getCurrentEmpleado();
-    
+
     if (!this.currentEmpleado) {
       this.router.navigate(['/login']);
       return;
@@ -34,6 +43,22 @@ export class MainLayoutComponent implements OnInit {
       this.currentEmpleado?.foto,
       this.currentEmpleado?.nombre
     );
+
+    // Cargar badges
+    this.resumenSub = this.notificacionesService.resumen$.subscribe(
+      resumen => this.resumen = resumen
+    );
+    this.notificacionesService.cargarResumen().subscribe();
+
+    // Refrescar badges cada 5 segundos
+    this.refreshInterval = setInterval(() => {
+      this.notificacionesService.cargarResumen().subscribe();
+    }, 5000);
+  }
+
+  ngOnDestroy() {
+    this.resumenSub?.unsubscribe();
+    if (this.refreshInterval) clearInterval(this.refreshInterval);
   }
 
   private getFotoUrl(fotoPath: string | undefined, nombre: string): string {
@@ -70,6 +95,7 @@ export class MainLayoutComponent implements OnInit {
   }
 
   logout() {
+    this.notificacionesService.limpiar();
     this.auth.logout();
     this.router.navigate(['/login']);
   }
@@ -104,5 +130,18 @@ export class MainLayoutComponent implements OnInit {
 
   getUserRole(): string {
     return this.auth.getUserRole();
+  }
+
+  // Badge helpers
+  getBadgeSolicitudes(): number {
+    if (!this.resumen) return 0;
+    if (this.isAdmin() || this.isSupervisor()) {
+      return this.resumen.solicitudesPendientes;
+    }
+    return this.resumen.solicitudesAprobadas + this.resumen.solicitudesRechazadas;
+  }
+
+  getBadgeEventos(): number {
+    return this.resumen?.eventosSinResponder || 0;
   }
 }

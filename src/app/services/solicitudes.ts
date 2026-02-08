@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { SolicitudResponse } from '../interfaces/solicitud';
@@ -13,14 +13,6 @@ export class SolicitudesService {
   private apiConfig = inject(ApiConfigService);
   private get apiUrl() {
     return `${this.apiConfig.apiUrl}/solicitudes`;
-  }
-
-  private getHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token') || '';
-    return new HttpHeaders({
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    });
   }
 
   crearSolicitud(solicitud: any): Observable<any> {
@@ -68,8 +60,7 @@ export class SolicitudesService {
   }
 
   editarSolicitud(id: number, datos: any): Observable<any> {
-    const headers = this.getHeaders();
-    return this.http.put<any>(`${this.apiUrl}/editar/${id}`, datos, { headers }).pipe(
+    return this.http.put<any>(`${this.apiUrl}/editar/${id}`, datos).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error.status === 403) {
           return throwError(() => 'No tiene permisos para editar esta solicitud');
@@ -118,8 +109,7 @@ export class SolicitudesService {
   }
 
   eliminarSolicitud(id: number): Observable<any> {
-    const headers = this.getHeaders();
-    return this.http.delete<any>(`${this.apiUrl}/eliminar/${id}`, { headers }).pipe(
+    return this.http.delete<any>(`${this.apiUrl}/eliminar/${id}`).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error.status === 403) {
           return throwError(() => error.error?.error || 'No tiene permisos para eliminar esta solicitud');

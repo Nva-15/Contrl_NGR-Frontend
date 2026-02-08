@@ -81,7 +81,7 @@ export class EmpleadosComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.cargarEmpleados();
     this.setupListeners();
-    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 5000);
   }
 
   ngOnDestroy() {

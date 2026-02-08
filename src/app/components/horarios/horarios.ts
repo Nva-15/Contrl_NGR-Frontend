@@ -107,7 +107,7 @@ export class HorariosComponent implements OnInit, OnDestroy {
       this.filtroRol = rol;
     }
     this.cargarSemanas();
-    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 5000);
   }
 
   ngOnDestroy() {
@@ -116,6 +116,13 @@ export class HorariosComponent implements OnInit, OnDestroy {
 
   private refrescarDatos() {
     if (this.isLoading || this.mostrarModal || this.mostrarModalCrear) return;
+    // Refrescar lista de semanas disponibles (detecta nuevas activaciones)
+    this.horariosService.getSemanasHorarios().subscribe({
+      next: (semanas) => {
+        this.semanasDisponibles = this.filtrarSemanasVisibles(semanas);
+      }
+    });
+    // Refrescar semana seleccionada
     if (this.semanaSeleccionada) {
       this.horariosService.getSemanaById(this.semanaSeleccionada.id).subscribe({
         next: (semana) => {

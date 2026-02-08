@@ -99,7 +99,7 @@ export class EventosComponent implements OnInit, OnDestroy {
 
     this.actualizarFechaMinima();
 
-    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 5000);
   }
 
   ngOnDestroy() {

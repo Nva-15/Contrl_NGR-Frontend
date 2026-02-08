@@ -34,27 +34,23 @@
           <div class="col-md-2">
             <select class="form-select form-select-sm" [(ngModel)]="filtroTipoMisSolicitudes">
               <option value="">Todos los Tipos</option>
-              <option value="vacaciones">🏖️ Vacaciones</option>
-              <option value="permiso">📋 Permiso</option>
-              <option value="descanso">🏥 Descanso</option>
-              <option value="compensacion">⏰ Compensación</option>
-              <option value="licencia">📄 Licencia</option>
+              <option value="vacaciones">Vacaciones</option>
+              <option value="permiso">Permiso</option>
+              <option value="descanso">Descanso</option>
+              <option value="compensacion">Compensacion</option>
+              <option value="licencia">Licencia</option>
             </select>
           </div>
 
-          <div class="col-md-auto d-flex align-items-center gap-2">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text">Desde</span>
-              <input type="date" class="form-control" 
-                     [(ngModel)]="filtroFechaInicioMisSolicitudes" 
-                     (change)="validarFechasFiltro()">
-            </div>
-            <div class="input-group input-group-sm">
-              <span class="input-group-text">Hasta</span>
-              <input type="date" class="form-control" 
-                     [(ngModel)]="filtroFechaFinMisSolicitudes" 
-                     [min]="filtroFechaInicioMisSolicitudes">
-            </div>
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroPeriodoMisSolicitudes">
+              <option value="hoy">Hoy</option>
+              <option value="7d">Ultimos 7 dias</option>
+              <option value="15d">Ultimos 15 dias</option>
+              <option value="1m">Ultimo mes</option>
+              <option value="3m">Ultimos 3 meses</option>
+              <option value="todos">Todos</option>
+            </select>
           </div>
 
           <div class="col-auto">
@@ -245,24 +241,39 @@
             </div>
           </div>
 
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" [(ngModel)]="filtroPeriodoHistorial"
+                    title="Filtrar por fecha de gestion">
+              <option value="hoy">Gestionados Hoy</option>
+              <option value="7d">Ultimos 7 dias</option>
+              <option value="15d">Ultimos 15 dias</option>
+              <option value="1m">Ultimo mes</option>
+              <option value="3m">Ultimos 3 meses</option>
+              <option value="todos">Todos</option>
+            </select>
+          </div>
+
           <div class="col-md-auto d-flex align-items-center gap-2">
             <div class="input-group input-group-sm">
               <span class="input-group-text">Desde</span>
-              <input type="date" class="form-control" 
-                     [(ngModel)]="filtroFechaInicioHistorial" 
-                     (change)="validarFechasFiltro()">
+              <input type="date" class="form-control"
+                     [(ngModel)]="filtroFechaInicioHistorial"
+                     (change)="validarFechasFiltro()"
+                     title="Fecha inicio de la solicitud">
             </div>
             <div class="input-group input-group-sm">
               <span class="input-group-text">Hasta</span>
-              <input type="date" class="form-control" 
-                     [(ngModel)]="filtroFechaFinHistorial" 
-                     [min]="filtroFechaInicioHistorial">
+              <input type="date" class="form-control"
+                     [(ngModel)]="filtroFechaFinHistorial"
+                     [min]="filtroFechaInicioHistorial"
+                     (change)="validarFechasFiltro()"
+                     title="Fecha fin de la solicitud">
             </div>
           </div>
 
           <div class="col-auto">
-            <button class="btn btn-sm btn-outline-secondary" 
-                    (click)="limpiarFiltros()" 
+            <button class="btn btn-sm btn-outline-secondary"
+                    (click)="limpiarFiltros()"
                     title="Limpiar filtros">
               <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
             </button>

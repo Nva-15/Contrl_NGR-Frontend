@@ -5,11 +5,11 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth';
 import { AsistenciaService } from '../../services/asistencia';
-import { EmpleadosService } from '../../services/empleados';
 import { HorariosService } from '../../services/horarios';
 import { NotificationService } from '../../services/notification.service';
 import { ApiConfigService } from '../../services/api-config.service';
 import { EventosService } from '../../services/eventos';
+import { NotificacionesService } from '../../services/notificaciones';
 import { HorarioSemanal, HorarioDia } from '../../interfaces/horario';
 import { Evento, RespuestaEventoRequest } from '../../interfaces/evento';
 
@@ -28,11 +28,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private auth = inject(AuthService);
   private asistenciaService = inject(AsistenciaService);
-  private empleadosService = inject(EmpleadosService);
   private horariosService = inject(HorariosService);
   private notification = inject(NotificationService);
   private apiConfig = inject(ApiConfigService);
   private eventosService = inject(EventosService);
+  private notificacionesService = inject(NotificacionesService);
   private http = inject(HttpClient);
   private router = inject(Router);
 
@@ -92,14 +92,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.cargarAsistencia();
     this.cargarHorario();
     this.cargarEventos();
+    this.mostrarNotificacionesPostLogin();
 
     // Actualizar la hora cada segundo
     this.intervaloReloj = setInterval(() => {
       this.fechaActual = new Date();
     }, 1000);
 
-    // Auto-refresh datos cada 30 segundos
-    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+    // Auto-refresh datos cada 5 segundos
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 5000);
   }
 
   ngOnDestroy() {
@@ -109,6 +110,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private refrescarDatos() {
     if (this.isLoading || !this.currentEmpleado?.id) return;
+    if (this.mostrarModalPerfil || this.mostrarModalEvento) return;
     this.asistenciaService.getAsistenciasPorEmpleado(this.currentEmpleado.id).subscribe({
       next: (data: any[]) => {
         const hoy = new Date().toLocaleDateString('en-CA');
@@ -118,6 +120,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.eventosService.getEventosActivos().subscribe({
       next: (eventos) => this.eventosActivos = eventos.filter(e => !e.yaRespondio)
     });
+    if (this.currentEmpleado.rol !== 'admin') {
+      this.horariosService.getMiHorarioVigente(this.currentEmpleado.id).subscribe({
+        next: (data) => this.horarioSemanal = data
+      });
+    }
   }
 
   private getFotoUrl(fotoPath: string | undefined, nombre: string): string {
@@ -730,5 +737,62 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } else {
       this.cerrarModalEvento();
     }
+  }
+
+  // ==================== NOTIFICACIONES POST-LOGIN ====================
+
+  private mostrarNotificacionesPostLogin() {
+    // Solo mostrar una vez por sesion
+    const yaMostrado = sessionStorage.getItem('notificacionesMostradas');
+    if (yaMostrado) return;
+
+    this.notificacionesService.cargarResumen().subscribe({
+      next: (resumen) => {
+        if (!resumen) return;
+        sessionStorage.setItem('notificacionesMostradas', 'true');
+
+        // Mostrar toasts con delay para que no se apilen todos a la vez
+        let delay = 1500; // esperar a que cargue el dashboard
+
+        if (resumen.solicitudesAprobadas > 0) {
+          setTimeout(() => {
+            this.notification.success(
+              `Tienes ${resumen.solicitudesAprobadas} solicitud(es) aprobada(s) recientemente`,
+              'Solicitudes'
+            );
+          }, delay);
+          delay += 800;
+        }
+
+        if (resumen.solicitudesRechazadas > 0) {
+          setTimeout(() => {
+            this.notification.warning(
+              `Tienes ${resumen.solicitudesRechazadas} solicitud(es) rechazada(s) recientemente`,
+              'Solicitudes'
+            );
+          }, delay);
+          delay += 800;
+        }
+
+        if (resumen.eventosSinResponder > 0) {
+          setTimeout(() => {
+            this.notification.info(
+              `Tienes ${resumen.eventosSinResponder} evento(s) pendiente(s) de responder`,
+              'Eventos'
+            );
+          }, delay);
+          delay += 800;
+        }
+
+        if ((this.isAdmin() || this.isSupervisor()) && resumen.solicitudesPendientes > 0) {
+          setTimeout(() => {
+            this.notification.info(
+              `Hay ${resumen.solicitudesPendientes} solicitud(es) esperando aprobacion`,
+              'Pendientes'
+            );
+          }, delay);
+        }
+      }
+    });
   }
 }

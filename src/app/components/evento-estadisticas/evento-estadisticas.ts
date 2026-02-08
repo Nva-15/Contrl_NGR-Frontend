@@ -48,7 +48,7 @@ export class EventoEstadisticasComponent implements OnInit, OnDestroy {
     if (id) {
       this.eventoId = parseInt(id);
       this.cargarDatos();
-      this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+      this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 5000);
     } else {
       this.router.navigate(['/eventos']);
     }

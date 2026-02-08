@@ -8,6 +8,7 @@ import { ActivatedRoute } from '@angular/router';
 import { EmpleadosService } from '../../services/empleados';
 import { FormsModule } from '@angular/forms';
 import { NotificationService } from '../../services/notification.service';
+import { NotificacionesService } from '../../services/notificaciones';
 
 @Component({
   selector: 'app-solicitudes',
@@ -22,6 +23,7 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
   private empleadosService = inject(EmpleadosService);
   private route = inject(ActivatedRoute);
   private notification = inject(NotificationService);
+  private notificacionesService = inject(NotificacionesService);
 
   currentUser: any;
   misSolicitudes: SolicitudResponse[] = [];
@@ -31,6 +33,7 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
 
   filtroEstadoMisSolicitudes = '';
   filtroTipoMisSolicitudes = '';
+  filtroPeriodoMisSolicitudes = '7d';
   filtroFechaInicioMisSolicitudes = '';
   filtroFechaFinMisSolicitudes = '';
 
@@ -46,6 +49,7 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
   filtroEmpleadoHistorial = '';
   filtroFechaInicioHistorial = '';
   filtroFechaFinHistorial = '';
+  filtroPeriodoHistorial = '7d';
 
   nuevaSolicitud = {
     tipo: 'vacaciones',
@@ -99,7 +103,10 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
       this.cargarTodosEmpleados();
     }
 
-    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 30000);
+    // Limpiar badge de solicitudes al entrar a la pagina
+    this.notificacionesService.limpiarSolicitudes();
+
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 5000);
   }
 
   ngOnDestroy() {
@@ -529,10 +536,12 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
   }
 
   get misSolicitudesFiltradas() {
+    const fechaCorte = this.getFechaCorte(this.filtroPeriodoMisSolicitudes);
+
     return this.misSolicitudes.filter(sol => {
       let matchEstado = true;
       let matchTipo = true;
-      let matchFecha = true;
+      let matchPeriodo = true;
 
       if (this.filtroEstadoMisSolicitudes) {
         matchEstado = sol.estado === this.filtroEstadoMisSolicitudes;
@@ -542,18 +551,44 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
         matchTipo = sol.tipo === this.filtroTipoMisSolicitudes;
       }
 
-      if (this.filtroFechaInicioMisSolicitudes && sol.fechaInicio) {
-        const fechaSol = sol.fechaInicio.split('T')[0];
-        matchFecha = fechaSol >= this.filtroFechaInicioMisSolicitudes;
+      if (fechaCorte && sol.fechaSolicitud) {
+        const fechaSol = sol.fechaSolicitud.split('T')[0];
+        matchPeriodo = fechaSol >= fechaCorte;
       }
 
-      if (this.filtroFechaFinMisSolicitudes && sol.fechaInicio) {
-        const fechaSol = sol.fechaInicio.split('T')[0];
-        matchFecha = matchFecha && fechaSol <= this.filtroFechaFinMisSolicitudes;
-      }
-
-      return matchEstado && matchTipo && matchFecha;
+      return matchEstado && matchTipo && matchPeriodo;
     });
+  }
+
+  private getFechaCorte(periodo: string): string | null {
+    if (!periodo || periodo === 'todos') return null;
+
+    const hoy = new Date();
+    let fecha: Date;
+
+    switch (periodo) {
+      case 'hoy':
+        fecha = hoy;
+        break;
+      case '7d':
+        fecha = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '15d':
+        fecha = new Date(hoy.getTime() - 15 * 24 * 60 * 60 * 1000);
+        break;
+      case '1m':
+        fecha = new Date(hoy);
+        fecha.setMonth(fecha.getMonth() - 1);
+        break;
+      case '3m':
+        fecha = new Date(hoy);
+        fecha.setMonth(fecha.getMonth() - 3);
+        break;
+      default:
+        return null;
+    }
+
+    return fecha.toISOString().split('T')[0];
   }
 
   get pendientesFiltradas() {
@@ -597,12 +632,15 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
   get historialGlobalFiltrado() {
     if (!this.esJefe()) return [];
 
+    const fechaCorte = this.getFechaCorte(this.filtroPeriodoHistorial);
+
     return this.historialGlobal.filter(sol => {
       let matchRol = true;
       let matchTipo = true;
       let matchEstado = true;
       let matchEmpleado = true;
-      let matchFecha = true;
+      let matchPeriodo = true;
+      let matchFechaRango = true;
 
       if (this.filtroRolHistorial) {
         const empleado = this.todosEmpleados.find(e => e.id === sol.empleadoId);
@@ -623,17 +661,23 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
         matchEmpleado = sol.empleadoNombre.toLowerCase().includes(this.filtroEmpleadoHistorial.toLowerCase());
       }
 
+      // Filtro por periodo de fecha de gestion/aprobacion
+      if (fechaCorte) {
+        const fechaProceso = (sol.fechaAprobacion || sol.fechaSolicitud || '').split('T')[0];
+        matchPeriodo = fechaProceso >= fechaCorte;
+      }
+
+      // Filtro por rango de fechas de solicitud (Desde/Hasta)
       if (this.filtroFechaInicioHistorial && sol.fechaInicio) {
         const fechaSol = sol.fechaInicio.split('T')[0];
-        matchFecha = fechaSol >= this.filtroFechaInicioHistorial;
+        matchFechaRango = fechaSol >= this.filtroFechaInicioHistorial;
       }
-
       if (this.filtroFechaFinHistorial && sol.fechaInicio) {
         const fechaSol = sol.fechaInicio.split('T')[0];
-        matchFecha = matchFecha && fechaSol <= this.filtroFechaFinHistorial;
+        matchFechaRango = matchFechaRango && fechaSol <= this.filtroFechaFinHistorial;
       }
 
-      return matchRol && matchTipo && matchEstado && matchEmpleado && matchFecha;
+      return matchRol && matchTipo && matchEstado && matchEmpleado && matchPeriodo && matchFechaRango;
     }).sort((a, b) => {
       const fechaA = a.fechaAprobacion || a.fechaSolicitud || '';
       const fechaB = b.fechaAprobacion || b.fechaSolicitud || '';
@@ -668,6 +712,11 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
         this.filtroFechaFinHistorial < this.filtroFechaInicioHistorial) {
       this.filtroFechaFinHistorial = this.filtroFechaInicioHistorial;
     }
+
+    // Si se usa Desde/Hasta en historial, cambiar periodo a "todos" para buscar en todo
+    if (this.filtroFechaInicioHistorial || this.filtroFechaFinHistorial) {
+      this.filtroPeriodoHistorial = 'todos';
+    }
   }
 
   limpiarFiltros() {
@@ -675,8 +724,7 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
       case 'mis-solicitudes':
         this.filtroEstadoMisSolicitudes = '';
         this.filtroTipoMisSolicitudes = '';
-        this.filtroFechaInicioMisSolicitudes = '';
-        this.filtroFechaFinMisSolicitudes = '';
+        this.filtroPeriodoMisSolicitudes = '7d';
         break;
       case 'aprobar':
         this.filtroTipoPendientes = '';
@@ -697,6 +745,7 @@ export class SolicitudesComponent implements OnInit, OnDestroy {
         this.filtroEmpleadoHistorial = '';
         this.filtroFechaInicioHistorial = '';
         this.filtroFechaFinHistorial = '';
+        this.filtroPeriodoHistorial = '7d';
         if (this.esAdmin()) {
           this.filtroRolHistorial = 'supervisor';
         } else if (this.esSupervisor()) {

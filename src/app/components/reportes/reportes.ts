@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AsistenciaService } from '../../services/asistencia';
@@ -14,7 +14,7 @@ import { ReporteAsistencia } from '../../interfaces/asistencia';
   templateUrl: './reportes.html',
   styleUrls: ['./reportes.css']
 })
-export class ReportesComponent implements OnInit {
+export class ReportesComponent implements OnInit, OnDestroy {
   private asistenciaService = inject(AsistenciaService);
   private authService = inject(AuthService);
   private exportService = inject(ExportService);
@@ -56,6 +56,7 @@ export class ReportesComponent implements OnInit {
   totalATiempo = 0;
   totalTardanzas = 0;
   totalFaltas = 0;
+  private intervaloAutoRefresh: any;
 
   ngOnInit(): void {
     const now = new Date();
@@ -63,6 +64,21 @@ export class ReportesComponent implements OnInit {
     this.fechaInicio = this.fechaHoy;
     this.fechaFin = this.fechaHoy;
     this.cargarReporte();
+    this.intervaloAutoRefresh = setInterval(() => this.refrescarDatos(), 5000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.intervaloAutoRefresh) clearInterval(this.intervaloAutoRefresh);
+  }
+
+  private refrescarDatos(): void {
+    if (this.isLoading || !this.fechaInicio || !this.fechaFin) return;
+    this.asistenciaService.getReporteAsistencia(this.fechaInicio, this.fechaFin).subscribe({
+      next: (data) => {
+        this.reporteCompleto = this.filtrarPorPermisoDeRol(data);
+        this.aplicarFiltros();
+      }
+    });
   }
 
   private formatDate(date: Date): string {
