@@ -169,7 +169,7 @@
               </td>
               <td class="text-center">
                 <span *ngIf="r.minutosRetraso !== null && r.minutosRetraso > 0" class="text-danger fw-bold">
-                  {{ r.minutosRetraso }} min
+                  {{ formatRetraso(r.minutosRetraso) }}
                 </span>
                 <span *ngIf="r.minutosRetraso !== null && r.minutosRetraso === 0">-</span>
                 <span *ngIf="r.minutosRetraso === null">-</span>

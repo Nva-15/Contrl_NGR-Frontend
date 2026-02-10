@@ -202,6 +202,13 @@ export class ReportesComponent implements OnInit, OnDestroy {
     return hora.length >= 5 ? hora.substring(0, 5) : hora;
   }
 
+  formatRetraso(minutos: number): string {
+    if (minutos < 60) return `${minutos} min`;
+    const horas = Math.floor(minutos / 60);
+    const mins = minutos % 60;
+    return mins > 0 ? `${horas}h ${mins}min` : `${horas}h`;
+  }
+
   getDiaSemanaLabel(dia: string): string {
     const labels: { [key: string]: string } = {
       'lunes': 'Lun', 'martes': 'Mar', 'miercoles': 'Mie',
@@ -277,7 +284,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
       horarioEntrada: this.formatHora(r.horarioEntrada),
       horaReal: this.formatHora(r.horaEntradaReal),
       estado: r.estado,
-      minutosRetraso: r.minutosRetraso !== null ? r.minutosRetraso : '-',
+      minutosRetraso: r.minutosRetraso !== null && r.minutosRetraso > 0 ? this.formatRetraso(r.minutosRetraso) : '-',
       observaciones: r.observaciones || ''
     }));
   }
